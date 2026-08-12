@@ -30,6 +30,36 @@ void printUsage(const char* programName) {
               << "  help                     Show this help message\n";
 }
 
+std::string readTextFile(const std::string& filepath) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) return "";
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    return content;
+}
+
+std::string buildDevPayload(const std::string& manifestPath) {
+    fs::path p(manifestPath);
+    std::string manifestContent = readTextFile(manifestPath);
+    if (manifestContent.empty()) return "";
+
+    std::string cssContent = "";
+    fs::path cssPath = p.parent_path() / "content.css";
+    if (fs::exists(cssPath)) {
+        cssContent = readTextFile(cssPath.string());
+    }
+
+    try {
+        json jManifest = json::parse(manifestContent);
+        json payload;
+        payload["manifest"] = jManifest;
+        payload["css"] = cssContent;
+        return payload.dump();
+    } catch (const std::exception& e) {
+        std::cerr << "[Watcher] Error parsing manifest JSON: " << e.what() << "\n";
+        return "";
+    }
+}
+
 std::string readManifestFile(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) return "";
@@ -108,8 +138,8 @@ int runDevServer(const std::string& manifestPath) {
                     std::cout << "[WS] Connected: " << connectionState->getRemoteIp() << "\n";
                     auto wsActive = webSocket.lock();
                     if (wsActive) {
-                        std::string currentManifest = readManifestFile(manifestPath);
-                        if (!currentManifest.empty()) wsActive->send(currentManifest);
+                        std::string currentPayload = buildDevPayload(manifestPath);
+                        if (!currentPayload.empty()) wsActive->send(currentPayload);
                     }
                 } else if (msg->type == ix::WebSocketMessageType::Close) {
                     std::cout << "[WS] Disconnected: " << connectionState->getRemoteIp() << "\n";
@@ -125,15 +155,15 @@ int runDevServer(const std::string& manifestPath) {
     }
     server.start();
 
-    std::string lastContent = "";
+    std::string lastPayload = "";
     while (true) {
-        std::string currentContent = readManifestFile(manifestPath);
-        if (!currentContent.empty() && currentContent != lastContent) {
+        std::string currentPayload = buildDevPayload(manifestPath);
+        if (!currentPayload.empty() && currentPayload != lastPayload) {
             std::cout << "[Watcher] Syncing changes...\n";
             for (auto&& client : server.getClients()) {
-                client->send(currentContent);
+                client->send(currentPayload);
             }
-            lastContent = currentContent;
+            lastPayload = currentPayload;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
@@ -154,11 +184,9 @@ int runPublish(const std::string& manifestPath = "manifest.json") {
     try {
         json manifest = json::parse(rawJson);
         
-        // 1. Extract and sanitize targetUrl (e.g., "*://safebooru.org/*" -> "safebooru.org")
         std::string targetUrl = manifest.value("targetUrl", "");
         targetUrl = std::regex_replace(targetUrl, std::regex(R"(^\*://|/\*$)"), "");
         
-        // 2. Extract and sanitize theme name (e.g., "Obsidian Dark" -> "obsidian-dark")
         std::string themeLabel = manifest["theme"].value("label", "untitled");
         std::string themeName = std::regex_replace(themeLabel, std::regex(R"(\s+)"), "-");
         std::transform(themeName.begin(), themeName.end(), themeName.begin(), ::tolower);
@@ -169,49 +197,74 @@ int runPublish(const std::string& manifestPath = "manifest.json") {
         }
 
         std::string branchName = "theme/" + targetUrl + "/" + themeName;
+        std::string targetRepoUrl = "https://github.com/watashi-00/spm-websites.git";
 
-        std::cout << "[Publish] Target Domain : " << targetUrl << "\n";
-        std::cout << "[Publish] Theme Name    : " << themeName << "\n";
-        std::cout << "[Publish] Executing Git pipeline...\n";
+        fs::path currentDir = fs::current_path();
+        fs::path tempWorkspace = fs::temp_directory_path() / ("spm_publish_" + themeName);
 
-        // 3. Build Git Commands
-        // Creates the branch (or switches if it exists)
-        std::string cmdCheckout = "git checkout -b " + branchName + " 2> /dev/null || git checkout " + branchName;
-        std::string cmdAdd = "git add .";
-        std::string cmdCommit = "git commit -m \"feat(theme): publish " + themeName + " for " + targetUrl + "\"";
-        std::string cmdPush = "git push -u origin " + branchName;
+        std::cout << "[Publish] Creating isolated workspace...\n";
+        
+        if (fs::exists(tempWorkspace)) {
+            fs::remove_all(tempWorkspace);
+        }
 
-        // 4. Execute commands sequentially
-        if (std::system(cmdCheckout.c_str()) != 0) {
-            std::cerr << "[Error] Failed to switch/create git branch.\n"; 
+        // Shallow clone with sparse checkout (Zero file downloads, instant fetch)
+        std::string cmdClone = "git clone --depth 1 --filter=blob:none --sparse " + targetRepoUrl + " " + tempWorkspace.string() + " -q";
+        if (std::system(cmdClone.c_str()) != 0) {
+            std::cerr << "[Error] Failed to connect to repository. Check your git permissions.\n";
             return 1;
         }
-        
-        if (std::system(cmdAdd.c_str()) != 0) {
-            std::cerr << "[Error] Failed to add files to git.\n"; 
-            return 1;
+
+        // Create and checkout the new branch
+        std::string cmdCheckout = "git -C " + tempWorkspace.string() + " checkout -b " + branchName + " -q";
+        std::system(cmdCheckout.c_str());
+
+        // Create the deterministic directory structure: targetUrl/theme-name/
+        fs::path targetFolder = tempWorkspace / targetUrl / themeName;
+        fs::create_directories(targetFolder);
+
+        std::cout << "[Publish] Packaging theme files...\n";
+        for (const auto& entry : fs::directory_iterator(currentDir)) {
+            if (entry.is_regular_file()) {
+                auto ext = entry.path().extension();
+                if (ext == ".json" || ext == ".css") {
+                    fs::copy(entry.path(), targetFolder / entry.path().filename(), fs::copy_options::overwrite_existing);
+                }
+            }
         }
-        
-        // We ignore the commit return value because it returns non-zero if there are no new changes to commit
+
+        std::cout << "[Publish] Pushing to remote registry...\n";
+
+        // ADD --sparse bypasses the sparse-checkout limits for these specific new files
+        std::string cmdAdd = "git -C " + tempWorkspace.string() + " add --sparse .";
+        std::string cmdCommit = "git -C " + tempWorkspace.string() + " commit -m \"feat(theme): publish " + themeName + " for " + targetUrl + "\" -q";
+        std::string cmdPush = "git -C " + tempWorkspace.string() + " push -u origin " + branchName + " -q";
+
+        std::system(cmdAdd.c_str());
         std::system(cmdCommit.c_str()); 
         
         if (std::system(cmdPush.c_str()) != 0) {
-            std::cerr << "[Error] Failed to push to remote repository.\n"; 
+            std::cerr << "[Error] Failed to push to remote repository.\n";
+            fs::remove_all(tempWorkspace); 
             return 1;
         }
 
+        fs::remove_all(tempWorkspace);
+
         std::cout << "===========================================\n";
-        std::cout << "✅ Success! Theme pushed to GitHub.\n";
-        std::cout << "Go to the spm-themes repository and open a Pull Request to trigger the Edge Deployment.\n";
+        std::cout << "✅ Success! Theme pushed to GitHub securely.\n";
+        std::cout << "Go to https://github.com/watashi-00/spm-websites/pulls\n";
+        std::cout << "Open a Pull Request to trigger the Edge Deployment.\n";
         std::cout << "===========================================\n";
 
     } catch (const std::exception& e) {
-        std::cerr << "[Error] Manifest parse failed: " << e.what() << "\n";
+        std::cerr << "[Error] Process failed: " << e.what() << "\n";
         return 1;
     }
 
     return 0;
 }
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         printUsage(argv[0]);
