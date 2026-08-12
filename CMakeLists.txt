@@ -25,9 +25,9 @@ FetchContent_Declare(
 set(USE_TLS ON CACHE BOOL "Enable SSL/TLS support" FORCE)
 FetchContent_MakeAvailable(ixwebsocket)
 
-add_executable(spm-cli src/main.cpp)
+add_executable(spm src/main.cpp)
 
-target_link_libraries(spm-cli
+target_link_libraries(spm
     PRIVATE
     nlohmann_json::nlohmann_json
     ixwebsocket
