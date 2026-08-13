@@ -75,6 +75,9 @@ private:
             if (it != classMap_.end()) {
                 resolveClass(*(it->second));
                 mergeProperties(child.properties, it->second->properties);
+                if (child.scope.empty()) {
+                    child.scope = it->second->scope;
+                }
             } else {
                 throw std::runtime_error("[Resolver Error] Unknown base class for child: " + child.extendsClass);
             }

@@ -15,7 +15,9 @@ public:
         nlohmann::json childObj = nlohmann::json::object();
         childObj["name"] = child.name;
         childObj["selector"] = child.selector;
-        childObj["scope"] = child.scope.empty() ? "container" : child.scope;
+        if (!child.scope.empty() && child.scope != "container") {
+            childObj["scope"] = child.scope;
+        }
 
         nlohmann::json childProps = nlohmann::json::object();
         nlohmann::json childPropsMap = nlohmann::json::object();
@@ -32,8 +34,8 @@ public:
             }
         }
 
-        childObj["props"] = childProps;
-        childObj["propsMap"] = childPropsMap;
+        if (!childProps.empty()) childObj["props"] = childProps;
+        if (!childPropsMap.empty()) childObj["propsMap"] = childPropsMap;
 
         if (!child.children.empty()) {
             nlohmann::json childChildrenArr = nlohmann::json::array();
@@ -53,14 +55,11 @@ public:
             std::string val = valueStr;
             while(!val.empty() && std::isspace(static_cast<unsigned char>(val.front()))) val.erase(val.begin());
             while(!val.empty() && std::isspace(static_cast<unsigned char>(val.back()))) val.pop_back();
-            if (!val.empty() && (val.front() == '[' || val.front() == '{')) {
-                try {
-                    return nlohmann::json::parse(val);
-                } catch (...) {
-                    return valueStr;
-                }
+            try {
+                return nlohmann::json::parse(val);
+            } catch (...) {
+                return valueStr;
             }
-            return valueStr;
         };
 
         // 1. Theme
@@ -90,16 +89,14 @@ public:
         for (const auto& sel : ast.selectors) {
             nlohmann::json selObj = nlohmann::json::object();
             selObj["containerSelector"] = sel.selector;
+            if (!sel.component.empty()) {
+                selObj["name"] = sel.component;
+            }
 
             if (sel.action == "hide") {
                 selObj["action"] = "hide";
             } else {
-                if (!sel.component.empty()) {
-                    selObj["layoutComponent"] = sel.component;
-                }
-                if (!sel.action.empty() && sel.action != "replace") {
-                    selObj["action"] = sel.action;
-                }
+                selObj["action"] = sel.action.empty() ? "replace" : sel.action;
 
                 nlohmann::json propsObj = nlohmann::json::object();
                 nlohmann::json propsMapObj = nlohmann::json::object();
@@ -116,8 +113,8 @@ public:
                     }
                 }
 
-                selObj["props"] = propsObj;
-                selObj["propsMap"] = propsMapObj;
+                if (!propsObj.empty()) selObj["props"] = propsObj;
+                if (!propsMapObj.empty()) selObj["propsMap"] = propsMapObj;
             }
 
             componentsArr.push_back(selObj);
@@ -147,7 +144,9 @@ public:
             nlohmann::json propsMapObj = nlohmann::json::object();
 
             for (const auto& prop : recon.properties) {
-                if (prop.isBinding) {
+                if (prop.key == "urlPattern" || prop.key == "infiniteScroll") {
+                    reconObj[prop.key] = parsePropValue(prop.value);
+                } else if (prop.isBinding) {
                     std::string val = prop.bindingTarget;
                     if (!prop.bindingOperation.empty()) {
                         val += " | " + prop.bindingOperation;
@@ -158,8 +157,8 @@ public:
                 }
             }
 
-            reconObj["props"] = propsObj;
-            reconObj["propsMap"] = propsMapObj;
+            if (!propsObj.empty()) reconObj["props"] = propsObj;
+            if (!propsMapObj.empty()) reconObj["propsMap"] = propsMapObj;
 
             nlohmann::json childrenArr = nlohmann::json::array();
             for (const auto& child : recon.children) {
@@ -192,7 +191,17 @@ public:
         nlohmann::json compiled = toJSON(ast);
 
         for (auto it = compiled.begin(); it != compiled.end(); ++it) {
-            root[it.key()] = it.value();
+            if (it.key() == "theme" && root.contains("theme") && root["theme"].is_object() && it.value().is_object()) {
+                nlohmann::json mergedTheme = it.value();
+                for (auto themeIt = root["theme"].begin(); themeIt != root["theme"].end(); ++themeIt) {
+                    if (!mergedTheme.contains(themeIt.key())) {
+                        mergedTheme[themeIt.key()] = themeIt.value();
+                    }
+                }
+                root["theme"] = mergedTheme;
+            } else {
+                root[it.key()] = it.value();
+            }
         }
 
         return root.dump(4);
