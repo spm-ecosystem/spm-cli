@@ -35,3 +35,6 @@ target_link_libraries(spm
     OpenSSL::Crypto
     pthread
 )
+
+add_executable(test_emitter src/veneer/test_emitter.cpp)
+target_link_libraries(test_emitter PRIVATE nlohmann_json::nlohmann_json)
