@@ -1,0 +1,319 @@
+#ifndef VENEER_PARSER_HPP
+#define VENEER_PARSER_HPP
+
+#include "lexer.hpp"
+#include <string>
+#include <vector>
+#include <map>
+#include <stdexcept>
+#include <iostream>
+
+namespace veneer {
+
+struct ASTProperty {
+    std::string key;
+    std::string value;
+    bool isBinding = false;
+    std::string bindingTarget;
+    std::string bindingOperation;
+};
+
+struct ASTChild {
+    std::string name;
+    std::string selector;
+    std::string extendsClass;
+    std::string scope;
+    std::vector<ASTProperty> properties;
+};
+
+struct ThemeNode {
+    std::string label;
+    std::map<std::string, std::string> variables;
+    std::vector<std::string> customStyles;
+};
+
+struct ClassNode {
+    std::string name;
+    std::string scope = "container";
+    std::vector<ASTProperty> properties;
+};
+
+struct SelectorNode {
+    std::string selector;
+    std::string component;
+    std::string action;
+    std::vector<ASTProperty> properties;
+};
+
+struct ReconstructNode {
+    std::string selector;
+    std::string component;
+    std::vector<ASTProperty> properties;
+    std::map<std::string, std::string> preservationSlots;
+    std::string mediaQuery;
+    std::vector<ASTChild> children;
+};
+
+struct ASTNode {
+    std::vector<ThemeNode> themes;
+    std::vector<ClassNode> classes;
+    std::vector<SelectorNode> selectors;
+    std::vector<ReconstructNode> reconstructs;
+};
+
+class Parser {
+public:
+    explicit Parser(const std::vector<Token>& tokens) : tokens_(tokens), pos_(0) {}
+
+    ASTNode parse() {
+        ASTNode root;
+        while (!isAtEnd()) {
+            if (match(TokenType::KeywordTheme)) {
+                root.themes.push_back(parseTheme());
+            } else if (match(TokenType::KeywordClass)) {
+                root.classes.push_back(parseClass());
+            } else if (match(TokenType::KeywordSelector)) {
+                root.selectors.push_back(parseSelector());
+            } else if (match(TokenType::KeywordReconstruct)) {
+                root.reconstructs.push_back(parseReconstruct());
+            } else {
+                throw error(peek(), "Unexpected token in global scope");
+            }
+        }
+        return root;
+    }
+
+private:
+    std::vector<Token> tokens_;
+    size_t pos_;
+
+    bool isAtEnd() const {
+        return peek().type == TokenType::EOFToken;
+    }
+
+    const Token& peek() const {
+        return tokens_[pos_];
+    }
+
+    const Token& previous() const {
+        return tokens_[pos_ - 1];
+    }
+
+    const Token& advance() {
+        if (!isAtEnd()) pos_++;
+        return previous();
+    }
+
+    bool check(TokenType type) const {
+        if (isAtEnd()) return false;
+        return peek().type == type;
+    }
+
+    bool match(TokenType type) {
+        if (check(type)) {
+            advance();
+            return true;
+        }
+        return false;
+    }
+
+    const Token& consume(TokenType type, const std::string& message) {
+        if (check(type)) return advance();
+        throw error(peek(), message);
+    }
+
+    bool matchKeywordOrIdentifier(TokenType keywordType, std::string_view identifierValue) {
+        if (match(keywordType)) {
+            return true;
+        }
+        if (peek().type == TokenType::Identifier && peek().value == identifierValue) {
+            advance();
+            return true;
+        }
+        return false;
+    }
+
+    std::runtime_error error(const Token& token, const std::string& message) {
+        return std::runtime_error("[Parser Error] Line " + std::to_string(token.line) + ": " + message);
+    }
+
+    std::string parseStringOrIdentifier() {
+        if (match(TokenType::StringLiteral) || match(TokenType::Identifier) ||
+            match(TokenType::KeywordTheme) || match(TokenType::KeywordSelector) ||
+            match(TokenType::KeywordReconstruct) || match(TokenType::KeywordClass) ||
+            match(TokenType::KeywordExtends) || match(TokenType::KeywordBind) ||
+            match(TokenType::KeywordPreserve) || match(TokenType::KeywordChild) ||
+            match(TokenType::KeywordVariables) || match(TokenType::KeywordStyles) ||
+            match(TokenType::KeywordScope)) {
+            std::string val(previous().value);
+            if (previous().type == TokenType::StringLiteral) {
+                if (val.size() >= 2 && val.front() == '"' && val.back() == '"') {
+                    val = val.substr(1, val.size() - 2);
+                }
+            }
+            return val;
+        }
+        throw error(peek(), "Expected string literal or identifier");
+    }
+
+    ThemeNode parseTheme() {
+        ThemeNode theme;
+        theme.label = parseStringOrIdentifier();
+        consume(TokenType::BraceOpen, "Expected '{' after theme name");
+
+        while (!check(TokenType::BraceClose) && !isAtEnd()) {
+            if (match(TokenType::KeywordVariables)) {
+                consume(TokenType::BraceOpen, "Expected '{' after variables");
+                while (!check(TokenType::BraceClose) && !isAtEnd()) {
+                    std::string key = parseStringOrIdentifier();
+                    consume(TokenType::Colon, "Expected ':' after variable name");
+                    std::string val = parseStringOrIdentifier();
+                    consume(TokenType::Semicolon, "Expected ';' after variable value");
+                    theme.variables[key] = val;
+                }
+                consume(TokenType::BraceClose, "Expected '}' after variables block");
+            } else if (matchKeywordOrIdentifier(TokenType::KeywordStyles, "customStyles")) {
+                consume(TokenType::BraceOpen, "Expected '{' after customStyles");
+                while (!check(TokenType::BraceClose) && !isAtEnd()) {
+                    theme.customStyles.push_back(parseStringOrIdentifier());
+                }
+                consume(TokenType::BraceClose, "Expected '}' after customStyles block");
+            } else {
+                std::string key = parseStringOrIdentifier();
+                consume(TokenType::Colon, "Expected ':' after variable name");
+                std::string val = parseStringOrIdentifier();
+                consume(TokenType::Semicolon, "Expected ';' after variable value");
+                theme.variables[key] = val;
+            }
+        }
+        consume(TokenType::BraceClose, "Expected '}' after theme block");
+        return theme;
+    }
+
+    ClassNode parseClass() {
+        ClassNode cls;
+        cls.name = parseStringOrIdentifier();
+        consume(TokenType::BraceOpen, "Expected '{' after class name");
+
+        while (!check(TokenType::BraceClose) && !isAtEnd()) {
+            if (matchKeywordOrIdentifier(TokenType::KeywordScope, "scope")) {
+                consume(TokenType::Colon, "Expected ':' after scope");
+                cls.scope = parseStringOrIdentifier();
+                consume(TokenType::Semicolon, "Expected ';' after scope value");
+            } else {
+                cls.properties.push_back(parseProperty());
+            }
+        }
+        consume(TokenType::BraceClose, "Expected '}' after class block");
+        return cls;
+    }
+
+    SelectorNode parseSelector() {
+        SelectorNode sel;
+        sel.selector = parseStringOrIdentifier();
+        if (match(TokenType::Arrow)) {
+            sel.component = parseStringOrIdentifier();
+        }
+        consume(TokenType::BraceOpen, "Expected '{' after selector");
+
+        while (!check(TokenType::BraceClose) && !isAtEnd()) {
+            if (peek().type == TokenType::Identifier && peek().value == "action") {
+                advance();
+                consume(TokenType::Colon, "Expected ':' after action");
+                sel.action = parseStringOrIdentifier();
+                consume(TokenType::Semicolon, "Expected ';' after action value");
+            } else {
+                sel.properties.push_back(parseProperty());
+            }
+        }
+        consume(TokenType::BraceClose, "Expected '}' after selector block");
+        return sel;
+    }
+
+    ReconstructNode parseReconstruct() {
+        ReconstructNode recon;
+        recon.selector = parseStringOrIdentifier();
+        consume(TokenType::Arrow, "Expected '->' after selector in reconstruct");
+        recon.component = parseStringOrIdentifier();
+        consume(TokenType::BraceOpen, "Expected '{' after reconstruct definition");
+
+        while (!check(TokenType::BraceClose) && !isAtEnd()) {
+            if (matchKeywordOrIdentifier(TokenType::KeywordPreserve, "preserve")) {
+                consume(TokenType::BraceOpen, "Expected '{' after preserve");
+                while (!check(TokenType::BraceClose) && !isAtEnd()) {
+                    std::string slot = parseStringOrIdentifier();
+                    consume(TokenType::Colon, "Expected ':' after preserve slot");
+                    std::string sel = parseStringOrIdentifier();
+                    consume(TokenType::Semicolon, "Expected ';' after preserve value");
+                    recon.preservationSlots[slot] = sel;
+                }
+                consume(TokenType::BraceClose, "Expected '}' after preserve block");
+            } else if (peek().type == TokenType::Identifier && (peek().value == "media" || peek().value == "mediaQuery")) {
+                advance();
+                consume(TokenType::Colon, "Expected ':' after media");
+                recon.mediaQuery = parseStringOrIdentifier();
+                consume(TokenType::Semicolon, "Expected ';' after media query");
+            } else if (matchKeywordOrIdentifier(TokenType::KeywordChild, "child")) {
+                ASTChild child;
+                child.name = parseStringOrIdentifier();
+                if (matchKeywordOrIdentifier(TokenType::KeywordExtends, "extends")) {
+                    child.extendsClass = parseStringOrIdentifier();
+                }
+                consume(TokenType::BraceOpen, "Expected '{' after child definition");
+                while (!check(TokenType::BraceClose) && !isAtEnd()) {
+                    if (matchKeywordOrIdentifier(TokenType::KeywordSelector, "selector")) {
+                        consume(TokenType::Colon, "Expected ':' after selector");
+                        child.selector = parseStringOrIdentifier();
+                        consume(TokenType::Semicolon, "Expected ';' after selector value");
+                    } else if (matchKeywordOrIdentifier(TokenType::KeywordScope, "scope")) {
+                        consume(TokenType::Colon, "Expected ':' after scope");
+                        child.scope = parseStringOrIdentifier();
+                        consume(TokenType::Semicolon, "Expected ';' after scope value");
+                    } else {
+                        child.properties.push_back(parseProperty());
+                    }
+                }
+                consume(TokenType::BraceClose, "Expected '}' after child block");
+                recon.children.push_back(child);
+            } else {
+                recon.properties.push_back(parseProperty());
+            }
+        }
+        consume(TokenType::BraceClose, "Expected '}' after reconstruct block");
+        return recon;
+    }
+
+    ASTProperty parseProperty() {
+        ASTProperty prop;
+        if (matchKeywordOrIdentifier(TokenType::KeywordBind, "bind")) {
+            prop.isBinding = true;
+            prop.key = parseStringOrIdentifier();
+            consume(TokenType::Colon, "Expected ':' after bind key");
+            
+            std::string bindExpr = parseStringOrIdentifier();
+            // Parse bindExpr "target | op:param" or "target"
+            size_t pipePos = bindExpr.find('|');
+            if (pipePos != std::string::npos) {
+                prop.bindingTarget = bindExpr.substr(0, pipePos);
+                // trim spaces
+                while(!prop.bindingTarget.empty() && std::isspace(prop.bindingTarget.back())) prop.bindingTarget.pop_back();
+                size_t opStart = pipePos + 1;
+                while(opStart < bindExpr.size() && std::isspace(bindExpr[opStart])) opStart++;
+                prop.bindingOperation = bindExpr.substr(opStart);
+            } else {
+                prop.bindingTarget = bindExpr;
+            }
+            consume(TokenType::Semicolon, "Expected ';' after bind expression");
+        } else {
+            prop.key = parseStringOrIdentifier();
+            consume(TokenType::Colon, "Expected ':' after property key");
+            prop.value = parseStringOrIdentifier();
+            consume(TokenType::Semicolon, "Expected ';' after property value");
+        }
+        return prop;
+    }
+};
+
+} // namespace veneer
+
+#endif // VENEER_PARSER_HPP
