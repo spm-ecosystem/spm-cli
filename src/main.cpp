@@ -47,8 +47,40 @@ std::string readTextFile(const std::string& filepath) {
 std::string buildDevPayload(const std::string& manifestPath) {
     fs::path p(manifestPath);
     std::string manifestContent;
+    fs::path cssPath;
+    fs::path siblingManifest;
 
-    if (p.extension() == ".vnr") {
+    if (fs::is_directory(p)) {
+        std::string combinedVnr = "";
+        for (const auto& entry : fs::recursive_directory_iterator(p)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
+                combinedVnr += readTextFile(entry.path().string()) + "\n\n";
+            }
+        }
+        if (combinedVnr.empty()) {
+            std::cerr << "[Watcher] No .vnr files found in directory: " << manifestPath << "\n";
+            return "";
+        }
+        try {
+            veneer::Lexer lexer(combinedVnr);
+            veneer::Parser parser(lexer.tokenize());
+            veneer::ASTNode ast = parser.parse();
+            veneer::Resolver resolver(ast);
+            resolver.resolve();
+
+            std::string existingJson = "";
+            siblingManifest = p / "manifest.json";
+            if (fs::exists(siblingManifest)) {
+                existingJson = readTextFile(siblingManifest.string());
+            }
+
+            manifestContent = veneer::Emitter::emit(ast, existingJson);
+        } catch (const std::exception& e) {
+            std::cerr << "[Watcher] Error compiling Veneer directory: " << e.what() << "\n";
+            return "";
+        }
+        cssPath = p / "content.css";
+    } else if (p.extension() == ".vnr") {
         std::string vnrContent = readTextFile(manifestPath);
         if (vnrContent.empty()) return "";
         try {
@@ -59,7 +91,7 @@ std::string buildDevPayload(const std::string& manifestPath) {
             resolver.resolve();
 
             std::string existingJson = "";
-            fs::path siblingManifest = p.parent_path() / "manifest.json";
+            siblingManifest = p.parent_path() / "manifest.json";
             if (fs::exists(siblingManifest)) {
                 existingJson = readTextFile(siblingManifest.string());
             }
@@ -69,13 +101,14 @@ std::string buildDevPayload(const std::string& manifestPath) {
             std::cerr << "[Watcher] Error compiling Veneer spec: " << e.what() << "\n";
             return "";
         }
+        cssPath = p.parent_path() / "content.css";
     } else {
         manifestContent = readTextFile(manifestPath);
         if (manifestContent.empty()) return "";
+        cssPath = p.parent_path() / "content.css";
     }
 
     std::string cssContent = "";
-    fs::path cssPath = p.parent_path() / "content.css";
     if (fs::exists(cssPath)) {
         cssContent = readTextFile(cssPath.string());
     }
@@ -162,23 +195,36 @@ int runCompile(int argc, char** argv) {
     }
 
     if (sourcePath.empty() || outputPath.empty()) {
-        std::cerr << "[Error] Usage: spm compile <source.vnr> -o <output.json>\n";
+        std::cerr << "[Error] Usage: spm compile <source.vnr|directory> -o <output.json>\n";
         return 1;
     }
 
     if (!fs::exists(sourcePath)) {
-        std::cerr << "[Error] Source file does not exist: " << sourcePath << "\n";
+        std::cerr << "[Error] Source path does not exist: " << sourcePath << "\n";
         return 1;
     }
 
-    std::string sourceContent = readTextFile(sourcePath);
-    if (sourceContent.empty()) {
-        std::cerr << "[Error] Could not read source file or file is empty: " << sourcePath << "\n";
-        return 1;
+    std::string combinedVnr = "";
+    if (fs::is_directory(sourcePath)) {
+        for (const auto& entry : fs::recursive_directory_iterator(sourcePath)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
+                combinedVnr += readTextFile(entry.path().string()) + "\n\n";
+            }
+        }
+        if (combinedVnr.empty()) {
+            std::cerr << "[Error] No .vnr files found in directory: " << sourcePath << "\n";
+            return 1;
+        }
+    } else {
+        combinedVnr = readTextFile(sourcePath);
+        if (combinedVnr.empty()) {
+            std::cerr << "[Error] Could not read source file or file is empty: " << sourcePath << "\n";
+            return 1;
+        }
     }
 
     try {
-        veneer::Lexer lexer(sourceContent);
+        veneer::Lexer lexer(combinedVnr);
         veneer::Parser parser(lexer.tokenize());
         veneer::ASTNode ast = parser.parse();
         veneer::Resolver resolver(ast);
