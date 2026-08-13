@@ -227,6 +227,37 @@ int runCompile(int argc, char** argv) {
         veneer::Lexer lexer(combinedVnr);
         veneer::Parser parser(lexer.tokenize());
         veneer::ASTNode ast = parser.parse();
+
+        // If sourcePath is a file, load sibling classes to resolve dependencies
+        if (!fs::is_directory(sourcePath)) {
+            fs::path parentDir = fs::path(sourcePath).parent_path();
+            if (parentDir.empty()) parentDir = ".";
+            for (const auto& entry : fs::directory_iterator(parentDir)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".vnr" && entry.path() != fs::path(sourcePath)) {
+                    try {
+                        std::string siblingContent = readTextFile(entry.path().string());
+                        veneer::Lexer siblingLexer(siblingContent);
+                        veneer::Parser siblingParser(siblingLexer.tokenize());
+                        veneer::ASTNode siblingAst = siblingParser.parse();
+                        for (const auto& cls : siblingAst.classes) {
+                            bool exists = false;
+                            for (const auto& c : ast.classes) {
+                                if (c.name == cls.name) {
+                                    exists = true;
+                                    break;
+                                }
+                            }
+                            if (!exists) {
+                                ast.classes.push_back(cls);
+                            }
+                        }
+                    } catch (...) {
+                        // Sibling files might be syntactically incomplete, ignore errors
+                    }
+                }
+            }
+        }
+
         veneer::Resolver resolver(ast);
         resolver.resolve();
 
