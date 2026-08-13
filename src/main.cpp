@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <regex>
 #include <algorithm>
+#include <mutex>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -116,10 +117,13 @@ int installToPath(const std::string& currentExePath) {
     return 0;
 }
 
-int runDevServer(const std::string& manifestPath) {
-    if (manifestPath.empty()) {
-        std::cerr << "[Error] Missing manifest path. Use -d <path>\n";
-        return 1;
+std::string g_manifestPath = "";
+std::mutex g_manifestMutex;
+
+int runDevServer(const std::string& initialManifestPath) {
+    {
+        std::lock_guard<std::mutex> lock(g_manifestMutex);
+        g_manifestPath = initialManifestPath;
     }
 
     int port = 8080;
@@ -127,19 +131,61 @@ int runDevServer(const std::string& manifestPath) {
 
     std::cout << "===========================================\n";
     std::cout << "SPM Dev Server - ws://localhost:" << port << "\n";
-    std::cout << "Monitoring: " << manifestPath << "\n";
+    if (!initialManifestPath.empty()) {
+        std::cout << "Monitoring: " << initialManifestPath << "\n";
+    } else {
+        std::cout << "Monitoring: (Waiting for extension client to specify theme path...)\n";
+    }
     std::cout << "===========================================\n";
 
-    server.setOnConnectionCallback([manifestPath](std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
+    server.setOnConnectionCallback([&server](std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
         auto ws = webSocket.lock();
         if (ws) {
-            ws->setOnMessageCallback([webSocket, connectionState, manifestPath](const ix::WebSocketMessagePtr& msg) {
+            ws->setOnMessageCallback([webSocket, connectionState, &server](const ix::WebSocketMessagePtr& msg) {
                 if (msg->type == ix::WebSocketMessageType::Open) {
                     std::cout << "[WS] Connected: " << connectionState->getRemoteIp() << "\n";
-                    auto wsActive = webSocket.lock();
-                    if (wsActive) {
-                        std::string currentPayload = buildDevPayload(manifestPath);
-                        if (!currentPayload.empty()) wsActive->send(currentPayload);
+                    std::string currentPath;
+                    {
+                        std::lock_guard<std::mutex> lock(g_manifestMutex);
+                        currentPath = g_manifestPath;
+                    }
+                    if (!currentPath.empty()) {
+                        auto wsActive = webSocket.lock();
+                        if (wsActive) {
+                            std::string currentPayload = buildDevPayload(currentPath);
+                            if (!currentPayload.empty()) wsActive->send(currentPayload);
+                        }
+                    }
+                } else if (msg->type == ix::WebSocketMessageType::Message) {
+                    try {
+                        auto j = json::parse(msg->str);
+                        if (j.contains("action") && j["action"] == "watch") {
+                            std::string path = j.value("path", "");
+                            auto wsActive = webSocket.lock();
+                            if (path.empty()) {
+                                if (wsActive) wsActive->send(json{{"status", "error"}, {"message", "Path is empty"}}.dump());
+                                return;
+                            }
+                            if (!fs::exists(path)) {
+                                std::cerr << "[WS] Client requested invalid path: " << path << "\n";
+                                if (wsActive) wsActive->send(json{{"status", "error"}, {"message", "File does not exist: " + path}}.dump());
+                                return;
+                            }
+                            
+                            std::cout << "[WS] Monitoring target set to: " << path << "\n";
+                            {
+                                std::lock_guard<std::mutex> lock(g_manifestMutex);
+                                g_manifestPath = path;
+                            }
+                            
+                            if (wsActive) {
+                                wsActive->send(json{{"status", "success"}, {"watching", path}}.dump());
+                                std::string currentPayload = buildDevPayload(path);
+                                if (!currentPayload.empty()) wsActive->send(currentPayload);
+                            }
+                        }
+                    } catch (const std::exception& e) {
+                        // ignore malformed ws messages
                     }
                 } else if (msg->type == ix::WebSocketMessageType::Close) {
                     std::cout << "[WS] Disconnected: " << connectionState->getRemoteIp() << "\n";
@@ -155,15 +201,24 @@ int runDevServer(const std::string& manifestPath) {
     }
     server.start();
 
+    std::string lastPath = "";
     std::string lastPayload = "";
     while (true) {
-        std::string currentPayload = buildDevPayload(manifestPath);
-        if (!currentPayload.empty() && currentPayload != lastPayload) {
-            std::cout << "[Watcher] Syncing changes...\n";
-            for (auto&& client : server.getClients()) {
-                client->send(currentPayload);
+        std::string currentPath;
+        {
+            std::lock_guard<std::mutex> lock(g_manifestMutex);
+            currentPath = g_manifestPath;
+        }
+        if (!currentPath.empty()) {
+            std::string currentPayload = buildDevPayload(currentPath);
+            if (!currentPayload.empty() && (currentPath != lastPath || currentPayload != lastPayload)) {
+                std::cout << "[Watcher] Syncing changes...\n";
+                for (auto&& client : server.getClients()) {
+                    client->send(currentPayload);
+                }
+                lastPath = currentPath;
+                lastPayload = currentPayload;
             }
-            lastPayload = currentPayload;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
