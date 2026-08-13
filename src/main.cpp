@@ -478,6 +478,9 @@ int main(int argc, char** argv) {
                 break;
             }
         }
+        if (manifestPath.empty()) {
+            manifestPath = fs::current_path().string();
+        }
         return runDevServer(manifestPath);
     } 
     else if (command == "publish") {
