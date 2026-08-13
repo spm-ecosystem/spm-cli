@@ -14,6 +14,20 @@ public:
     static nlohmann::json toJSON(const ASTNode& ast) {
         nlohmann::json root = nlohmann::json::object();
 
+        auto parsePropValue = [](const std::string& valueStr) -> nlohmann::json {
+            std::string val = valueStr;
+            while(!val.empty() && std::isspace(static_cast<unsigned char>(val.front()))) val.erase(val.begin());
+            while(!val.empty() && std::isspace(static_cast<unsigned char>(val.back()))) val.pop_back();
+            if (!val.empty() && (val.front() == '[' || val.front() == '{')) {
+                try {
+                    return nlohmann::json::parse(val);
+                } catch (...) {
+                    return valueStr;
+                }
+            }
+            return valueStr;
+        };
+
         // 1. Theme
         if (!ast.themes.empty()) {
             const auto& themeNode = ast.themes[0];
@@ -63,7 +77,7 @@ public:
                         }
                         propsMapObj[prop.key] = val;
                     } else {
-                        propsObj[prop.key] = prop.value;
+                        propsObj[prop.key] = parsePropValue(prop.value);
                     }
                 }
 
@@ -105,7 +119,7 @@ public:
                     }
                     propsMapObj[prop.key] = val;
                 } else {
-                    propsObj[prop.key] = prop.value;
+                    propsObj[prop.key] = parsePropValue(prop.value);
                 }
             }
 
@@ -130,7 +144,7 @@ public:
                         }
                         childPropsMap[prop.key] = val;
                     } else {
-                        childProps[prop.key] = prop.value;
+                        childProps[prop.key] = parsePropValue(prop.value);
                     }
                 }
 
