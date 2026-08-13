@@ -88,7 +88,7 @@ public:
         nlohmann::json componentsArr = nlohmann::json::array();
         for (const auto& sel : ast.selectors) {
             nlohmann::json selObj = nlohmann::json::object();
-            selObj["containerSelector"] = sel.selector;
+            selObj["selector"] = sel.selector;
             if (!sel.component.empty()) {
                 selObj["name"] = sel.component;
             }

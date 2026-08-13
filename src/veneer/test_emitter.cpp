@@ -64,12 +64,12 @@ void testSelectorEmitter() {
     assert(j["components"].size() == 2);
 
     // Component 0: Hide action
-    assert(j["components"][0]["containerSelector"] == "#header-ad");
+    assert(j["components"][0]["selector"] == "#header-ad");
     assert(j["components"][0]["action"] == "hide");
 
     // Component 1: Component replacement with static & binding props
-    assert(j["components"][1]["containerSelector"] == ".legacy-sidebar");
-    assert(j["components"][1]["layoutComponent"] == "SidebarComponent");
+    assert(j["components"][1]["selector"] == ".legacy-sidebar");
+    assert(j["components"][1]["name"] == "SidebarComponent");
     assert(j["components"][1]["props"]["title"] == "Navigation");
     assert(j["components"][1]["propsMap"]["items"] == "user.menuItems | uppercase");
 
@@ -116,7 +116,7 @@ void testReconstructEmitter() {
     assert(recon["mediaQuery"] == "(max-width: 1024px)");
     assert(recon["preserve"]["header"] == "#site-header");
     assert(recon["preserve"]["footer"] == "#site-footer");
-    assert(recon["props"]["columns"] == "3");
+    assert(recon["props"]["columns"] == 3);
     assert(recon["propsMap"]["activeTab"] == "app.activeTab");
 
     assert(recon["children"].is_array());
@@ -124,7 +124,7 @@ void testReconstructEmitter() {
     auto& child = recon["children"][0];
     assert(child["name"] == "sidebar");
     assert(child["selector"] == ".sidebar-slot");
-    assert(child["scope"] == "container");
+    assert(!child.contains("scope"));
     assert(child["props"]["width"] == "250px");
     assert(child["propsMap"]["data"] == "app.sidebarData");
 
@@ -169,7 +169,7 @@ void testJsonMerging() {
     assert(j["theme"]["label"] == "Light");
     assert(j["theme"]["cssVariables"]["--bg-color"] == "#ffffff");
     assert(j["components"].size() == 1);
-    assert(j["components"][0]["containerSelector"] == ".old-btn");
+    assert(j["components"][0]["selector"] == ".old-btn");
     assert(j["components"][0]["action"] == "hide");
 
     std::cout << "testJsonMerging passed." << std::endl;
