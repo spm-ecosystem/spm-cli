@@ -24,6 +24,7 @@ struct ASTChild {
     std::string extendsClass;
     std::string scope;
     std::vector<ASTProperty> properties;
+    std::vector<ASTChild> children;
 };
 
 struct ThemeNode {
@@ -148,7 +149,13 @@ private:
             match(TokenType::KeywordScope)) {
             std::string val(previous().value);
             if (previous().type == TokenType::StringLiteral) {
-                if (val.size() >= 2 && val.front() == '"' && val.back() == '"') {
+                if ((val.rfind("R\"", 0) == 0 || val.rfind("r\"", 0) == 0) && val.back() == '"') {
+                    size_t parenOpen = val.find('(');
+                    size_t parenClose = val.rfind(')');
+                    if (parenOpen != std::string::npos && parenClose != std::string::npos && parenClose > parenOpen) {
+                        val = val.substr(parenOpen + 1, parenClose - parenOpen - 1);
+                    }
+                } else if (val.size() >= 2 && val.front() == '"' && val.back() == '"') {
                     val = val.substr(1, val.size() - 2);
                 }
             }
@@ -234,6 +241,32 @@ private:
         return sel;
     }
 
+    ASTChild parseChild() {
+        ASTChild child;
+        child.name = parseStringOrIdentifier();
+        if (matchKeywordOrIdentifier(TokenType::KeywordExtends, "extends")) {
+            child.extendsClass = parseStringOrIdentifier();
+        }
+        consume(TokenType::BraceOpen, "Expected '{' after child definition");
+        while (!check(TokenType::BraceClose) && !isAtEnd()) {
+            if (matchKeywordOrIdentifier(TokenType::KeywordSelector, "selector")) {
+                consume(TokenType::Colon, "Expected ':' after selector");
+                child.selector = parseStringOrIdentifier();
+                consume(TokenType::Semicolon, "Expected ';' after selector value");
+            } else if (matchKeywordOrIdentifier(TokenType::KeywordScope, "scope")) {
+                consume(TokenType::Colon, "Expected ':' after scope");
+                child.scope = parseStringOrIdentifier();
+                consume(TokenType::Semicolon, "Expected ';' after scope value");
+            } else if (matchKeywordOrIdentifier(TokenType::KeywordChild, "child")) {
+                child.children.push_back(parseChild());
+            } else {
+                child.properties.push_back(parseProperty());
+            }
+        }
+        consume(TokenType::BraceClose, "Expected '}' after child block");
+        return child;
+    }
+
     ReconstructNode parseReconstruct() {
         ReconstructNode recon;
         recon.selector = parseStringOrIdentifier();
@@ -258,27 +291,7 @@ private:
                 recon.mediaQuery = parseStringOrIdentifier();
                 consume(TokenType::Semicolon, "Expected ';' after media query");
             } else if (matchKeywordOrIdentifier(TokenType::KeywordChild, "child")) {
-                ASTChild child;
-                child.name = parseStringOrIdentifier();
-                if (matchKeywordOrIdentifier(TokenType::KeywordExtends, "extends")) {
-                    child.extendsClass = parseStringOrIdentifier();
-                }
-                consume(TokenType::BraceOpen, "Expected '{' after child definition");
-                while (!check(TokenType::BraceClose) && !isAtEnd()) {
-                    if (matchKeywordOrIdentifier(TokenType::KeywordSelector, "selector")) {
-                        consume(TokenType::Colon, "Expected ':' after selector");
-                        child.selector = parseStringOrIdentifier();
-                        consume(TokenType::Semicolon, "Expected ';' after selector value");
-                    } else if (matchKeywordOrIdentifier(TokenType::KeywordScope, "scope")) {
-                        consume(TokenType::Colon, "Expected ':' after scope");
-                        child.scope = parseStringOrIdentifier();
-                        consume(TokenType::Semicolon, "Expected ';' after scope value");
-                    } else {
-                        child.properties.push_back(parseProperty());
-                    }
-                }
-                consume(TokenType::BraceClose, "Expected '}' after child block");
-                recon.children.push_back(child);
+                recon.children.push_back(parseChild());
             } else {
                 recon.properties.push_back(parseProperty());
             }

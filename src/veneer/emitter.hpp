@@ -11,6 +11,41 @@ namespace veneer {
 
 class Emitter {
 public:
+    static nlohmann::json emitChild(const ASTChild& child, const std::function<nlohmann::json(const std::string&)>& parsePropValue) {
+        nlohmann::json childObj = nlohmann::json::object();
+        childObj["name"] = child.name;
+        childObj["selector"] = child.selector;
+        childObj["scope"] = child.scope.empty() ? "container" : child.scope;
+
+        nlohmann::json childProps = nlohmann::json::object();
+        nlohmann::json childPropsMap = nlohmann::json::object();
+
+        for (const auto& prop : child.properties) {
+            if (prop.isBinding) {
+                std::string val = prop.bindingTarget;
+                if (!prop.bindingOperation.empty()) {
+                    val += " | " + prop.bindingOperation;
+                }
+                childPropsMap[prop.key] = val;
+            } else {
+                childProps[prop.key] = parsePropValue(prop.value);
+            }
+        }
+
+        childObj["props"] = childProps;
+        childObj["propsMap"] = childPropsMap;
+
+        if (!child.children.empty()) {
+            nlohmann::json childChildrenArr = nlohmann::json::array();
+            for (const auto& c : child.children) {
+                childChildrenArr.push_back(emitChild(c, parsePropValue));
+            }
+            childObj["children"] = childChildrenArr;
+        }
+
+        return childObj;
+    }
+
     static nlohmann::json toJSON(const ASTNode& ast) {
         nlohmann::json root = nlohmann::json::object();
 
@@ -128,30 +163,7 @@ public:
 
             nlohmann::json childrenArr = nlohmann::json::array();
             for (const auto& child : recon.children) {
-                nlohmann::json childObj = nlohmann::json::object();
-                childObj["name"] = child.name;
-                childObj["selector"] = child.selector;
-                childObj["scope"] = child.scope.empty() ? "container" : child.scope;
-
-                nlohmann::json childProps = nlohmann::json::object();
-                nlohmann::json childPropsMap = nlohmann::json::object();
-
-                for (const auto& prop : child.properties) {
-                    if (prop.isBinding) {
-                        std::string val = prop.bindingTarget;
-                        if (!prop.bindingOperation.empty()) {
-                            val += " | " + prop.bindingOperation;
-                        }
-                        childPropsMap[prop.key] = val;
-                    } else {
-                        childProps[prop.key] = parsePropValue(prop.value);
-                    }
-                }
-
-                childObj["props"] = childProps;
-                childObj["propsMap"] = childPropsMap;
-
-                childrenArr.push_back(childObj);
+                childrenArr.push_back(emitChild(child, parsePropValue));
             }
 
             reconObj["children"] = childrenArr;

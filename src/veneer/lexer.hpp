@@ -143,7 +143,38 @@ public:
                 continue;
             }
 
-            // 5. String Literals ("...")
+            // 5. Raw String Literals (R"delim(content)delim")
+            if ((c == 'R' || c == 'r') && pos_ + 1 < len && source_[pos_ + 1] == '"') {
+                size_t start = pos_;
+                size_t tokenLine = line_;
+                pos_ += 2; // skip R"
+                
+                size_t delimStart = pos_;
+                while (pos_ < len && source_[pos_] != '(') {
+                    pos_++;
+                }
+                std::string_view delimiter = source_.substr(delimStart, pos_ - delimStart);
+                pos_++; // skip '('
+                
+                std::string targetEnd = ")";
+                targetEnd += delimiter;
+                targetEnd += '"';
+                
+                while (pos_ < len) {
+                    if (source_[pos_] == '\n') {
+                        line_++;
+                    }
+                    if (source_.substr(pos_).rfind(targetEnd, 0) == 0) {
+                        pos_ += targetEnd.size();
+                        break;
+                    }
+                    pos_++;
+                }
+                tokens.push_back({TokenType::StringLiteral, source_.substr(start, pos_ - start), tokenLine});
+                continue;
+            }
+
+            // 6. Standard String Literals ("...")
             if (c == '"') {
                 size_t start = pos_;
                 size_t tokenLine = line_;

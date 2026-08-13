@@ -79,6 +79,9 @@ private:
                 throw std::runtime_error("[Resolver Error] Unknown base class for child: " + child.extendsClass);
             }
         }
+        for (auto& c : child.children) {
+            resolveChild(c);
+        }
     }
 
     void mergeProperties(std::vector<ASTProperty>& target, const std::vector<ASTProperty>& base) {
