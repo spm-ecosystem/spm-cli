@@ -34,6 +34,7 @@ struct ThemeNode {
 
 struct ClassNode {
     std::string name;
+    std::string extendsClass;
     std::string scope = "container";
     std::vector<ASTProperty> properties;
 };
@@ -193,6 +194,9 @@ private:
     ClassNode parseClass() {
         ClassNode cls;
         cls.name = parseStringOrIdentifier();
+        if (matchKeywordOrIdentifier(TokenType::KeywordExtends, "extends")) {
+            cls.extendsClass = parseStringOrIdentifier();
+        }
         consume(TokenType::BraceOpen, "Expected '{' after class name");
 
         while (!check(TokenType::BraceClose) && !isAtEnd()) {
