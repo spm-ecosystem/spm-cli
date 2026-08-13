@@ -13,6 +13,11 @@
 #include <algorithm>
 #include <mutex>
 
+#include "veneer/lexer.hpp"
+#include "veneer/parser.hpp"
+#include "veneer/resolver.hpp"
+#include "veneer/emitter.hpp"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -26,7 +31,8 @@ void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " <command> [options]\n\n"
               << "Commands:\n"
               << "  install                  Install SPM CLI to system PATH\n"
-              << "  dev -d <manifest.json>   Start local WebSocket dev server\n"
+              << "  compile <source.vnr> -o <output.json>   Compile Veneer Spec file to manifest.json\n"
+              << "  dev -d <source.vnr|manifest.json>       Start local WebSocket dev server\n"
               << "  publish                  Publish theme to SPM registry\n"
               << "  help                     Show this help message\n";
 }
@@ -40,8 +46,33 @@ std::string readTextFile(const std::string& filepath) {
 
 std::string buildDevPayload(const std::string& manifestPath) {
     fs::path p(manifestPath);
-    std::string manifestContent = readTextFile(manifestPath);
-    if (manifestContent.empty()) return "";
+    std::string manifestContent;
+
+    if (p.extension() == ".vnr") {
+        std::string vnrContent = readTextFile(manifestPath);
+        if (vnrContent.empty()) return "";
+        try {
+            veneer::Lexer lexer(vnrContent);
+            veneer::Parser parser(lexer.tokenize());
+            veneer::ASTNode ast = parser.parse();
+            veneer::Resolver resolver(ast);
+            resolver.resolve();
+
+            std::string existingJson = "";
+            fs::path siblingManifest = p.parent_path() / "manifest.json";
+            if (fs::exists(siblingManifest)) {
+                existingJson = readTextFile(siblingManifest.string());
+            }
+
+            manifestContent = veneer::Emitter::emit(ast, existingJson);
+        } catch (const std::exception& e) {
+            std::cerr << "[Watcher] Error compiling Veneer spec: " << e.what() << "\n";
+            return "";
+        }
+    } else {
+        manifestContent = readTextFile(manifestPath);
+        if (manifestContent.empty()) return "";
+    }
 
     std::string cssContent = "";
     fs::path cssPath = p.parent_path() / "content.css";
@@ -115,6 +146,65 @@ int installToPath(const std::string& currentExePath) {
     std::cout << "[SPM] Restart your terminal or run 'source ~/.bashrc' to apply.\n";
 #endif
     return 0;
+}
+
+int runCompile(int argc, char** argv) {
+    std::string sourcePath = "";
+    std::string outputPath = "";
+
+    for (int i = 2; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "-o" && i + 1 < argc) {
+            outputPath = argv[++i];
+        } else if (arg[0] != '-') {
+            sourcePath = arg;
+        }
+    }
+
+    if (sourcePath.empty() || outputPath.empty()) {
+        std::cerr << "[Error] Usage: spm compile <source.vnr> -o <output.json>\n";
+        return 1;
+    }
+
+    if (!fs::exists(sourcePath)) {
+        std::cerr << "[Error] Source file does not exist: " << sourcePath << "\n";
+        return 1;
+    }
+
+    std::string sourceContent = readTextFile(sourcePath);
+    if (sourceContent.empty()) {
+        std::cerr << "[Error] Could not read source file or file is empty: " << sourcePath << "\n";
+        return 1;
+    }
+
+    try {
+        veneer::Lexer lexer(sourceContent);
+        veneer::Parser parser(lexer.tokenize());
+        veneer::ASTNode ast = parser.parse();
+        veneer::Resolver resolver(ast);
+        resolver.resolve();
+
+        std::string existingJson = "";
+        if (fs::exists(outputPath)) {
+            existingJson = readTextFile(outputPath);
+        }
+
+        std::string compiledJson = veneer::Emitter::emit(ast, existingJson);
+
+        std::ofstream outFile(outputPath);
+        if (!outFile.is_open()) {
+            std::cerr << "[Error] Failed to open output file for writing: " << outputPath << "\n";
+            return 1;
+        }
+        outFile << compiledJson << "\n";
+        outFile.close();
+
+        std::cout << "[SPM] Successfully compiled " << sourcePath << " -> " << outputPath << "\n";
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "[Error] Veneer compilation failed: " << e.what() << "\n";
+        return 1;
+    }
 }
 
 std::string g_manifestPath = "";
@@ -331,6 +421,9 @@ int main(int argc, char** argv) {
     if (command == "install") {
         return installToPath(argv[0]);
     } 
+    else if (command == "compile") {
+        return runCompile(argc, argv);
+    }
     else if (command == "dev") {
         std::string manifestPath = "";
         for (int i = 2; i < argc; i++) {
@@ -344,6 +437,10 @@ int main(int argc, char** argv) {
     else if (command == "publish") {
         return runPublish();
     } 
+    else if (command == "help") {
+        printUsage(argv[0]);
+        return 0;
+    }
     else {
         printUsage(argv[0]);
         return 1;
