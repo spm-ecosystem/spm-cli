@@ -419,7 +419,7 @@ int runPublish(const std::string& manifestPath = "manifest.json") {
         }
 
         std::string branchName = "theme/" + targetUrl + "/" + themeName;
-        std::string targetRepoUrl = "https://github.com/watashi-00/spm-websites.git";
+        std::string targetRepoUrl = "https://github.com/spm-ecosystem/spm-websites.git";
 
         fs::path currentDir = fs::current_path();
         fs::path tempWorkspace = fs::temp_directory_path() / ("spm_publish_" + themeName);
@@ -489,7 +489,7 @@ int runPublish(const std::string& manifestPath = "manifest.json") {
 
         std::cout << "===========================================\n";
         std::cout << "✅ Success! Theme pushed to GitHub securely.\n";
-        std::cout << "Go to https://github.com/watashi-00/spm-websites/pulls\n";
+        std::cout << "Go to https://github.com/spm-ecosystem/spm-websites/pulls\n";
         std::cout << "Open a Pull Request to trigger the Edge Deployment.\n";
         std::cout << "===========================================\n";
 
