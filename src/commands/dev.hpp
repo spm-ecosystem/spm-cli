@@ -11,6 +11,7 @@
 #include <ixwebsocket/IXConnectionState.h>
 #include "../utils/fs_utils.hpp"
 #include "../utils/css_bundler.hpp"
+#include "../utils/file_watcher.hpp"
 #include "../veneer/lexer.hpp"
 #include "../veneer/parser.hpp"
 #include "../veneer/resolver.hpp"
@@ -194,8 +195,14 @@ inline int runDevServer(const std::string& initialManifestPath) {
                   lastPath = currentPath;
                   lastPayload = currentPayload;
               }
+
+              // Wait for native file changes
+              fs::path p(currentPath);
+              fs::path themeDir = fs::is_directory(p) ? p : p.parent_path();
+              veneer::FileWatcher::waitChange(themeDir.string());
+          } else {
+              std::this_thread::sleep_for(std::chrono::milliseconds(500));
           }
-          std::this_thread::sleep_for(std::chrono::milliseconds(500));
       }
 
       server.stop();
