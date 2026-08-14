@@ -93,6 +93,13 @@ The compiled binary will be generated as `spm` in the root of the workspace.
 
 ---
 
+## Documentation
+
+- [Veneer Spec Syntax Guide](docs/veneer_spec.md)
+- [Theme Manifest Schema Reference](docs/manifest_schema.md)
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
