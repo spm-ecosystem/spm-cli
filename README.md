@@ -1,5 +1,7 @@
 # spm-cli
 
+[![Documentation Portal](https://img.shields.io/badge/docs-spm--portal-blue?style=for-the-badge)](https://spm-ecosystem.github.io/spm-portal/)
+
 A high-performance C++ compiler, file watcher, WebSocket dev server, and utility engine for Site Package Manager (SPM) theme layout configurations.
 
 ---
@@ -95,6 +97,7 @@ The compiled binary will be generated as `spm` in the root of the workspace.
 
 ## Documentation
 
+- [🌐 Interactive Documentation Portal](https://spm-ecosystem.github.io/spm-portal/)
 - [Veneer Spec Syntax Guide](docs/veneer_spec.md)
 - [Theme Manifest Schema Reference](docs/manifest_schema.md)
 
