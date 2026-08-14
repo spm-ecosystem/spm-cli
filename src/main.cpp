@@ -455,18 +455,17 @@ int runPublish(const std::string& manifestPath = "manifest.json") {
             }
         }
 
-        // Also copy vnr_project directory if it exists to preserve the source code in the GitOps repository
-        fs::path localVnrProj = currentDir / "vnr_project";
-        if (fs::exists(localVnrProj) && fs::is_directory(localVnrProj)) {
-            fs::path targetVnrProj = targetFolder / "vnr_project";
-            fs::create_directories(targetVnrProj);
-            for (const auto& entry : fs::recursive_directory_iterator(localVnrProj)) {
-                if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
-                    fs::path relPath = fs::relative(entry.path(), localVnrProj);
-                    fs::path destFile = targetVnrProj / relPath;
-                    fs::create_directories(destFile.parent_path());
-                    fs::copy(entry.path(), destFile, fs::copy_options::overwrite_existing);
+        // Find and copy all .vnr files recursively from the current directory, preserving their relative paths
+        for (const auto& entry : fs::recursive_directory_iterator(currentDir)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
+                // If spm_publish_ temp workspace is inside currentDir or matches, ignore it
+                if (entry.path().string().find(tempWorkspace.string()) != std::string::npos) {
+                    continue;
                 }
+                fs::path relPath = fs::relative(entry.path(), currentDir);
+                fs::path destFile = targetFolder / relPath;
+                fs::create_directories(destFile.parent_path());
+                fs::copy(entry.path(), destFile, fs::copy_options::overwrite_existing);
             }
         }
 
