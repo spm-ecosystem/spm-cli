@@ -59,13 +59,3 @@ Starts a local server on `ws://localhost:8080` to watch a target theme directory
 ./spm dev /path/to/theme/project/
 ```
 
----
-
-## Suggested GitHub Topic Tags
-`cplusplus` | `compiler-dsl` | `websocket-server` | `chrome-extension-helper` | `theme-modernization` | `development-tool`
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](file:///home/watashi/Projects/spm-cli/LICENSE) file for details.
