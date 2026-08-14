@@ -1,0 +1,40 @@
+name: CLI Compiler Release CD
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev cmake build-essential
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build project
+      run: cmake --build build --config Release
+
+    - name: Structure Release Folder
+      run: |
+        mkdir -p release_dist
+        cp build/spm release_dist/spm
+
+    - name: Push to release-cli branch
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        folder: release_dist
+        branch: release-cli
+        target-folder: .
+        clean: true
