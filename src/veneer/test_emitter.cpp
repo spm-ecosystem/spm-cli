@@ -3,8 +3,11 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 #include "../utils/css_bundler.hpp"
+#include "../utils/file_watcher.hpp"
 #include <iostream>
 #include <cassert>
+#include <thread>
+#include <chrono>
 
 using namespace veneer;
 
@@ -196,6 +199,29 @@ void testCssBundler() {
     fs::remove_all(tempDir);
     std::cout << "testCssBundler passed.\n";
 }
+void testFileWatcher() {
+    fs::path tempDir = fs::current_path() / "spm_test_watcher";
+    fs::create_directories(tempDir);
+
+    std::thread triggerThread([tempDir]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::ofstream triggerFile(tempDir / "change.css");
+        triggerFile << "/* change */";
+        triggerFile.close();
+    });
+
+    auto start = std::chrono::steady_clock::now();
+    veneer::FileWatcher::waitChange(tempDir.string());
+    auto end = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    assert(elapsed >= 90);
+    assert(elapsed < 2000);
+
+    triggerThread.join();
+    fs::remove_all(tempDir);
+    std::cout << "testFileWatcher passed.\n";
+}
 
 int main() {
     testThemeEmitter();
@@ -203,6 +229,7 @@ int main() {
     testReconstructEmitter();
     testJsonMerging();
     testCssBundler();
+    testFileWatcher();
     std::cout << "All emitter tests passed successfully!" << std::endl;
     return 0;
 }
