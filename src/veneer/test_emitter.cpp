@@ -2,6 +2,7 @@
 #include "resolver.hpp"
 #include "parser.hpp"
 #include "lexer.hpp"
+#include "../utils/css_bundler.hpp"
 #include <iostream>
 #include <cassert>
 
@@ -174,12 +175,34 @@ void testJsonMerging() {
 
     std::cout << "testJsonMerging passed." << std::endl;
 }
+void testCssBundler() {
+    fs::path tempDir = fs::current_path() / "spm_test_css";
+    fs::create_directories(tempDir);
+
+    std::ofstream f1(tempDir / "b.css");
+    f1 << "body { background: blue; }";
+    f1.close();
+
+    std::ofstream f2(tempDir / "a.css");
+    f2 << "a { color: red; }";
+    f2.close();
+
+    std::string result = veneer::bundleCssFiles(tempDir);
+
+    assert(result.find("a { color: red; }") != std::string::npos);
+    assert(result.find("body { background: blue; }") != std::string::npos);
+    assert(result.find("a.css") < result.find("b.css")); // alphabet sorting check
+
+    fs::remove_all(tempDir);
+    std::cout << "testCssBundler passed.\n";
+}
 
 int main() {
     testThemeEmitter();
     testSelectorEmitter();
     testReconstructEmitter();
     testJsonMerging();
+    testCssBundler();
     std::cout << "All emitter tests passed successfully!" << std::endl;
     return 0;
 }

@@ -17,6 +17,7 @@
 #include "veneer/parser.hpp"
 #include "veneer/resolver.hpp"
 #include "veneer/emitter.hpp"
+#include "utils/css_bundler.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -47,7 +48,6 @@ std::string readTextFile(const std::string& filepath) {
 std::string buildDevPayload(const std::string& manifestPath) {
     fs::path p(manifestPath);
     std::string manifestContent;
-    fs::path cssPath;
     fs::path siblingManifest;
 
     if (fs::is_directory(p)) {
@@ -79,7 +79,6 @@ std::string buildDevPayload(const std::string& manifestPath) {
             std::cerr << "[Watcher] Error compiling Veneer directory: " << e.what() << "\n";
             return "";
         }
-        cssPath = p / "content.css";
     } else if (p.extension() == ".vnr") {
         std::string vnrContent = readTextFile(manifestPath);
         if (vnrContent.empty()) return "";
@@ -101,17 +100,13 @@ std::string buildDevPayload(const std::string& manifestPath) {
             std::cerr << "[Watcher] Error compiling Veneer spec: " << e.what() << "\n";
             return "";
         }
-        cssPath = p.parent_path() / "content.css";
     } else {
         manifestContent = readTextFile(manifestPath);
         if (manifestContent.empty()) return "";
-        cssPath = p.parent_path() / "content.css";
     }
 
-    std::string cssContent = "";
-    if (fs::exists(cssPath)) {
-        cssContent = readTextFile(cssPath.string());
-    }
+    fs::path themeDir = fs::is_directory(p) ? p : p.parent_path();
+    std::string cssContent = veneer::bundleCssFiles(themeDir);
 
     try {
         json jManifest = json::parse(manifestContent);
@@ -446,12 +441,22 @@ int runPublish(const std::string& manifestPath = "manifest.json") {
         fs::create_directories(targetFolder);
 
         std::cout << "[Publish] Packaging theme files...\n";
+        // Copy JSON files
         for (const auto& entry : fs::directory_iterator(currentDir)) {
-            if (entry.is_regular_file()) {
-                auto ext = entry.path().extension();
-                if (ext == ".json" || ext == ".css") {
-                    fs::copy(entry.path(), targetFolder / entry.path().filename(), fs::copy_options::overwrite_existing);
-                }
+            if (entry.is_regular_file() && entry.path().extension() == ".json") {
+                fs::copy(entry.path(), targetFolder / entry.path().filename(), fs::copy_options::overwrite_existing);
+            }
+        }
+
+        // Bundle all CSS files and write to targetFolder / "content.css"
+        std::string bundledCss = veneer::bundleCssFiles(currentDir);
+        if (!bundledCss.empty()) {
+            std::ofstream cssOut(targetFolder / "content.css");
+            if (cssOut.is_open()) {
+                cssOut << bundledCss;
+                cssOut.close();
+            } else {
+                std::cerr << "[Warning] Failed to write bundled content.css\n";
             }
         }
 
