@@ -7,3 +7,6 @@ compile_commands.json
 Makefile
 spm
 test_emitter
+node_modules/
+build/
+node_modules

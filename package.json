@@ -1,0 +1,9 @@
+{
+  "name": "spm-cli-helpers",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

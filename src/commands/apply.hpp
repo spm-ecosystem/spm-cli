@@ -2,6 +2,9 @@
 #include <string>
 #include <iostream>
 #include <filesystem>
+#include <cstdlib>
+
+namespace fs = std::filesystem;
 
 namespace veneer {
 
@@ -26,14 +29,24 @@ inline int runApply(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "[Apply] Manifest: " << manifestPath << "\n";
-    std::cout << "[Apply] Input: " << inputPath << "\n";
-    std::cout << "[Apply] Output: " << outputPath << "\n";
-    std::cout << "[Apply] Applying styles and components to input HTML...\n";
-    std::cout << "[Apply] Progress: 100% completed.\n";
-    std::cout << "[Apply] Successfully applied changes to " << outputPath << ".\n";
+    // Resolve the apply.js script path relative to the running binary
+    fs::path exePath = fs::absolute(argv[0]).parent_path();
+    fs::path scriptPath = exePath / "scripts/apply.js";
+    if (!fs::exists(scriptPath)) {
+        scriptPath = exePath / "src/scripts/apply.js";
+    }
+    if (!fs::exists(scriptPath)) {
+        scriptPath = exePath / "../src/scripts/apply.js";
+    }
 
-    return 0;
+    if (!fs::exists(scriptPath)) {
+        std::cerr << "[Error] Apply helper script not found at: " << scriptPath << "\n";
+        return 1;
+    }
+
+    std::string cmd = "node \"" + scriptPath.string() + "\" \"" + manifestPath + "\" --input \"" + inputPath + "\" -o \"" + outputPath + "\"";
+
+    return std::system(cmd.c_str());
 }
 
 } // namespace veneer
