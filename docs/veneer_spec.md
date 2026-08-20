@@ -24,9 +24,25 @@ SPM works by intercepting the legacy site's HTML, hiding targeted sections, and 
 ### Scraping Mappings & Bindings
 A key concept of the Veneer Spec is the declarative binding of HTML nodes to component props using the extraction syntax:
 
-$$\text{Selector} \quad | \quad \text{Operation}$$
+$$\text{Selector} \quad | \quad \text{BaseExtractor} \quad [ \ | \ \text{Pipe} \ ]^*$$
 
-The Veneer engine evaluates this query at runtime against the page structure, scraping text content, attributes, or raw HTML, and feeding it dynamically as parameters into the React UI host.
+The Veneer engine evaluates this query at runtime against the page structure, scraping text content, attributes, or raw HTML, and then running any subsequent pipeline operations sequentially.
+
+#### 1. Base Extractors
+*   `text` - Extracts the `textContent` of the matched element.
+*   `html` - Extracts the `innerHTML` of the matched element.
+*   `attr:<name>` - Extracts the specified attribute value (e.g. `attr:src`, `attr:href`).
+*   `hrefOrOnclick` - Automatically resolves link destination from `href` or fallback inline `onclick` assignment.
+*   `nextSiblingText` - Extracts the text content of the immediate next sibling element.
+*   `hiddenInputs` - Collects all `<input type="hidden">` tags within the element as a JSON array string.
+*   `selector` - Generates a unique selector string for the element.
+
+#### 2. Pipe Operations (Sequential Processing)
+Pipes can be chained together sequentially using the `|` character.
+*   `split` - Splits a space-separated text string into a JSON stringified array of tokens (e.g. `"tag1 tag2"` -> `["tag1", "tag2"]`).
+*   `split:<delimiter>` - Splits a string by a custom delimiter and trims each token (e.g. `split:,` turns `"tag1, tag2"` -> `["tag1", "tag2"]`).
+*   `number` - Converts a valid number string directly into a JSON numeric value.
+*   `cleanNumber` - Strips currency symbols (`$`, `R$`, `€`), commas, and spacing, then parses the value into a JSON float number (e.g. `"$ 1,200.50"` -> `1200.5`).
 
 ---
 
