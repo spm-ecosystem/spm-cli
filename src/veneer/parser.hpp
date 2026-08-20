@@ -300,6 +300,33 @@ private:
         return recon;
     }
 
+    std::string parseJsonValue() {
+        std::string jsonStr;
+        int braceDepth = 0;
+        int bracketDepth = 0;
+        
+        while (!isAtEnd()) {
+            const Token& tok = peek();
+            if (tok.value == "[") {
+                bracketDepth++;
+            } else if (tok.value == "]") {
+                bracketDepth--;
+            } else if (tok.type == TokenType::BraceOpen) {
+                braceDepth++;
+            } else if (tok.type == TokenType::BraceClose) {
+                braceDepth--;
+            }
+            
+            jsonStr += tok.value;
+            advance();
+            
+            if (braceDepth == 0 && bracketDepth == 0) {
+                break;
+            }
+        }
+        return jsonStr;
+    }
+
     ASTProperty parseProperty() {
         ASTProperty prop;
         if (matchKeywordOrIdentifier(TokenType::KeywordBind, "bind")) {
@@ -324,7 +351,11 @@ private:
         } else {
             prop.key = parseStringOrIdentifier();
             consume(TokenType::Colon, "Expected ':' after property key");
-            prop.value = parseStringOrIdentifier();
+            if (peek().value == "[" || peek().type == TokenType::BraceOpen) {
+                prop.value = parseJsonValue();
+            } else {
+                prop.value = parseStringOrIdentifier();
+            }
             consume(TokenType::Semicolon, "Expected ';' after property value");
         }
         return prop;
