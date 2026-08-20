@@ -5,6 +5,8 @@
 #include "commands/compile.hpp"
 #include "commands/publish.hpp"
 #include "commands/dev.hpp"
+#include "commands/validate.hpp"
+#include "commands/apply.hpp"
 
 namespace fs = std::filesystem;
 
@@ -15,6 +17,8 @@ void printUsage(const char* programName) {
               << "  compile <source.vnr> -o <output.json>   Compile Veneer Spec file to manifest.json\n"
               << "  dev -d <source.vnr|manifest.json>       Start local WebSocket dev server\n"
               << "  publish                  Publish theme to SPM registry\n"
+              << "  validate <manifest.json> --against <snapshot.html>\n"
+              << "  apply <manifest.json> --input <input.html> -o <output.html>\n"
               << "  help                     Show this help message\n";
 }
 
@@ -48,6 +52,12 @@ int main(int argc, char** argv) {
     else if (command == "publish") {
         return veneer::runPublish();
     } 
+    else if (command == "validate") {
+        return veneer::runValidate(argc, argv);
+    }
+    else if (command == "apply") {
+        return veneer::runApply(argc, argv);
+    }
     else if (command == "help") {
         printUsage(argv[0]);
         return 0;
