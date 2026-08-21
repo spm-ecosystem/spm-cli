@@ -55,7 +55,7 @@ The `theme` block defines the metadata, visual design tokens (CSS custom propert
 *   **Rules**:
     *   Only one `theme` block is allowed per compiled project.
     *   Variables are defined inside the `variables` sub-block and compile to the manifest's `"cssVariables"`.
-    *   Custom stylesheet rules are defined under `customStyles: "<raw-css>";`.
+    *   Custom stylesheet rules are defined under `customStyles { "<raw-css>" }`.
 *   **Syntax**:
     ```scss
     theme "ModernDark" {
@@ -63,7 +63,9 @@ The `theme` block defines the metadata, visual design tokens (CSS custom propert
             --spm-accent: "#7c6af5";
             --spm-bg-primary: "#000000";
         }
-        customStyles: "#advertisement-banner { display: none !important; }";
+        customStyles {
+            "#advertisement-banner { display: none !important; }"
+        }
     }
     ```
 *   **Compiled Output**:
@@ -373,7 +375,9 @@ theme "ModernDark" {
         --spm-text-muted: "#a1a1aa";
         --spm-text-primary: "#ffffff";
     }
-    customStyles: "#system-banner, #cookie-consent-bar { display: none !important; }";
+    customStyles {
+        "#system-banner, #cookie-consent-bar { display: none !important; }"
+    }
 }
 ```
 
