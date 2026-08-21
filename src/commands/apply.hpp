@@ -2,7 +2,8 @@
 #include <string>
 #include <iostream>
 #include <filesystem>
-#include <cstdlib>
+#include <vector>
+#include "execute.hpp"
 
 namespace fs = std::filesystem;
 
@@ -44,9 +45,9 @@ inline int runApply(int argc, char** argv) {
         return 1;
     }
 
-    std::string cmd = "node \"" + scriptPath.string() + "\" \"" + manifestPath + "\" --input \"" + inputPath + "\" -o \"" + outputPath + "\"";
+    std::vector<std::string> args = { scriptPath.string(), manifestPath, "--input", inputPath, "-o", outputPath };
 
-    return std::system(cmd.c_str());
+    return safeExecute("node", args);
 }
 
 } // namespace veneer
