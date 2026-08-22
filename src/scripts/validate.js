@@ -34,6 +34,49 @@ try {
     components: []
   };
 
+  function parseCleanNumber(val) {
+    if (val === null || val === undefined) return null;
+    const raw = String(val).trim();
+    if (!raw) return null;
+
+    let multiplier = 1;
+    let workStr = raw;
+    const suffixMatch = raw.match(/([0-9.,]+)\s*([kKmMbB])\b/);
+    if (suffixMatch) {
+      const unit = suffixMatch[2].toLowerCase();
+      if (unit === 'k') multiplier = 1000;
+      else if (unit === 'm') multiplier = 1000000;
+      else if (unit === 'b') multiplier = 1000000000;
+      workStr = suffixMatch[1];
+    }
+
+    const isNegative = /^\s*-\s*[\$€R£\d]/.test(raw) || /[\$€R£\s]-\s*[\d.]/.test(raw);
+
+    let numStr = workStr.replace(/[^0-9.,]/g, '');
+    if (!numStr) return null;
+
+    if (numStr.includes(',') && numStr.includes('.')) {
+      if (numStr.lastIndexOf(',') > numStr.lastIndexOf('.')) {
+        numStr = numStr.replace(/\./g, '').replace(',', '.');
+      } else {
+        numStr = numStr.replace(/,/g, '');
+      }
+    } else if (numStr.includes(',')) {
+      const parts = numStr.split(',');
+      if (parts.length === 2 && parts[1].length <= 2) {
+        numStr = parts[0] + '.' + parts[1];
+      } else {
+        numStr = numStr.replace(/,/g, '');
+      }
+    }
+
+    const numVal = parseFloat(numStr);
+    if (isNaN(numVal)) return null;
+
+    const result = (isNegative ? -1 : 1) * numVal * multiplier;
+    return String(result);
+  }
+
   // Replicate browser runtime extractValue 100% exactly
   function extractValue(element, queryRule) {
     const parts = queryRule.split('|').map((s) => s.trim());
@@ -101,9 +144,7 @@ try {
         const numVal = Number(trimmed);
         val = isNaN(numVal) || trimmed === '' ? null : String(numVal);
       } else if (pipe === 'cleanNumber') {
-        const cleaned = val.replace(/[, \s]/g, '').replace(/[^0-9.-]/g, '');
-        const numVal = parseFloat(cleaned);
-        val = isNaN(numVal) || cleaned === '' ? null : String(numVal);
+        val = parseCleanNumber(val);
       } else if (pipe === 'split') {
         val = JSON.stringify(val.split(/\s+/).filter(item => item.length > 0));
       } else if (pipe.startsWith('split:')) {
