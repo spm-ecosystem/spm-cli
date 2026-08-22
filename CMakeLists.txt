@@ -38,3 +38,12 @@ target_link_libraries(spm
 
 add_executable(test_emitter src/veneer/test_emitter.cpp)
 target_link_libraries(test_emitter PRIVATE nlohmann_json::nlohmann_json)
+
+add_executable(test_lexer src/veneer/test_lexer.cpp)
+target_link_libraries(test_lexer PRIVATE nlohmann_json::nlohmann_json)
+
+add_executable(test_parser src/veneer/test_parser.cpp)
+target_link_libraries(test_parser PRIVATE nlohmann_json::nlohmann_json)
+
+add_executable(test_resolver src/veneer/test_resolver.cpp)
+target_link_libraries(test_resolver PRIVATE nlohmann_json::nlohmann_json)

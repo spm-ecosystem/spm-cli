@@ -26,4 +26,8 @@ jobs:
       run: cmake --build build --config Release
 
     - name: Run Tests
-      run: ./build/test_emitter
+      run: |
+        ./build/test_lexer
+        ./build/test_parser
+        ./build/test_resolver
+        ./build/test_emitter
