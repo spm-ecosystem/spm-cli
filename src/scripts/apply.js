@@ -89,6 +89,17 @@ try {
     }
   }
 
+  // 4. Inject Standalone Modernizer Engine Script
+  const body = document.body || document.documentElement;
+  
+  const manifestScript = document.createElement('script');
+  manifestScript.textContent = `window.__spm_dev_manifest = ${JSON.stringify(manifest)};`;
+  body.appendChild(manifestScript);
+
+  const engineScript = document.createElement('script');
+  engineScript.src = 'file:///home/watashi/Projects/extension/dist/src/content/index.iife.js';
+  body.appendChild(engineScript);
+
   fs.writeFileSync(outputPath, dom.serialize(), 'utf8');
   console.log(`[Apply] Successfully applied manifest transformations to ${outputPath}`);
 
