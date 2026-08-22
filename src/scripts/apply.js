@@ -80,11 +80,15 @@ try {
           }
         });
 
-        // Insert reconstruct host placeholder
+        // Insert reconstruct host placeholder before container so hiding container doesn't hide host
         const host = document.createElement('spm-reconstruct-host');
         host.setAttribute('layout', recon.layoutComponent);
         host.setAttribute('selector', recon.containerSelector);
-        container.appendChild(host);
+        if (container.parentNode) {
+          container.parentNode.insertBefore(host, container);
+        } else {
+          container.appendChild(host);
+        }
       }
     }
   }
