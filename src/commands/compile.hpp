@@ -89,6 +89,10 @@ inline int runCompile(int argc, char** argv) {
         veneer::Resolver resolver(ast);
         resolver.resolve();
 
+        for (const auto& warn : resolver.getWarnings()) {
+            std::cerr << warn << "\n";
+        }
+
         std::string existingJson = "";
         if (fs::exists(outputPath)) {
             existingJson = readTextFile(outputPath);

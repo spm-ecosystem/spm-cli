@@ -70,7 +70,6 @@ private:
                     msg += " Did you mean '" + hint + "'?";
                 }
                 warnings_.push_back(msg);
-                std::cerr << msg << std::endl;
             }
         }
     }

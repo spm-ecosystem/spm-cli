@@ -53,12 +53,15 @@ public:
 
         std::string bestMatch = "";
         size_t minDistance = 999;
+        size_t maxAllowedDist = std::max<size_t>(2, invalidKey.length() / 3);
 
         for (const auto& validProp : it->second) {
             size_t dist = levenshteinDistance(invalidKey, validProp);
-            if (dist < minDistance && dist <= 3) {
-                minDistance = dist;
-                bestMatch = validProp;
+            if (dist <= maxAllowedDist) {
+                if (dist < minDistance || (dist == minDistance && (bestMatch.empty() || validProp < bestMatch))) {
+                    minDistance = dist;
+                    bestMatch = validProp;
+                }
             }
         }
         return bestMatch;
