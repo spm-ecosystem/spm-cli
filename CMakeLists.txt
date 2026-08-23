@@ -50,3 +50,6 @@ target_link_libraries(test_resolver PRIVATE nlohmann_json::nlohmann_json)
 
 add_executable(test_registry src/veneer/test_registry.cpp)
 target_link_libraries(test_registry PRIVATE nlohmann_json::nlohmann_json)
+
+add_executable(test_extractor src/veneer/test_extractor.cpp)
+target_link_libraries(test_extractor PRIVATE nlohmann_json::nlohmann_json)
