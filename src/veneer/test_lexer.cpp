@@ -25,6 +25,7 @@ theme "Modern Dark" {
 
     reconstruct "header-nav" -> "navbar" {
         bind "logo" -> ".site-logo";
+        bind "price" -> ".price" | "cleanNumber";
         preserve "custom-nav-items";
         child "search-bar";
     }

@@ -7,6 +7,12 @@ compile_commands.json
 Makefile
 spm
 test_emitter
+test_lexer
+test_parser
+test_resolver
+test_registry
+test_extractor
+test_html_validator
 node_modules/
 build/
 node_modules
