@@ -2,6 +2,8 @@
 #define VENEER_RESOLVER_HPP
 
 #include "parser.hpp"
+#include "component_registry.hpp"
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -23,18 +25,55 @@ public:
             resolveClass(cls);
         }
         for (auto& recon : ast_.reconstructs) {
+            resolveReconstructNode(recon);
             for (auto& child : recon.children) {
                 resolveChild(child);
             }
         }
+        for (auto& sel : ast_.selectors) {
+            resolveComponentNode(sel);
+        }
+    }
+
+    const std::vector<std::string>& getWarnings() const {
+        return warnings_;
+    }
+
+    void resolveReconstructNode(ReconstructNode& recon) {
+        validateComponentProps(recon.component, recon.properties, true);
+    }
+
+    void resolveComponentNode(SelectorNode& sel) {
+        validateComponentProps(sel.component, sel.properties, false);
     }
 
 private:
     ASTNode& ast_;
+    std::vector<std::string> warnings_;
     std::map<std::string, ClassNode*> classMap_;
     std::unordered_set<std::string> resolvedClasses_;
     std::unordered_set<std::string> resolvingClasses_;
     std::vector<std::string> resolveStack_;
+
+    void validateComponentProps(const std::string& componentName, const std::vector<ASTProperty>& properties, bool isReconstruct = false) {
+        if (componentName.empty() || !ComponentSchemaRegistry::isKnownComponent(componentName)) {
+            return;
+        }
+        for (const auto& prop : properties) {
+            if (isReconstruct && (prop.key == "urlPattern" || prop.key == "infiniteScroll")) {
+                continue;
+            }
+            if (!ComponentSchemaRegistry::isValidProp(componentName, prop.key)) {
+                std::string msg = "[Compiler Warning] Property '" + prop.key + "' is not recognized on component '" + componentName + "'.";
+                std::string hint = ComponentSchemaRegistry::getDidYouMean(componentName, prop.key);
+                if (!hint.empty()) {
+                    msg += " Did you mean '" + hint + "'?";
+                }
+                warnings_.push_back(msg);
+                std::cerr << msg << std::endl;
+            }
+        }
+    }
 
     void resolveClass(ClassNode& cls) {
         if (resolvedClasses_.count(cls.name)) {

@@ -10,3 +10,6 @@ test_emitter
 node_modules/
 build/
 node_modules
+docs/superpowers/
+.superpowers/
+Testing/

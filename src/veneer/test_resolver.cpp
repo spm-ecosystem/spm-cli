@@ -142,11 +142,48 @@ void testCircularDependency() {
     std::cout << "testCircularDependency passed." << std::endl;
 }
 
+void testUnknownPropWarning() {
+    std::string code = R"(
+        reconstruct "#header" -> UiNavHeader {
+            siteNam: "My Brand";
+            sticky: "true";
+        }
+        selector ".card" -> UiImageCard {
+            titl: "Card Title";
+            completelyUnknownProperty: "123";
+        }
+        selector ".custom" -> CustomComponent {
+            customField: "hello";
+        }
+    )";
+    Lexer lexer(code);
+    Parser parser(lexer.tokenize());
+    ASTNode ast = parser.parse();
+    Resolver resolver(ast);
+    resolver.resolve();
+
+    const auto& warnings = resolver.getWarnings();
+    assert(warnings.size() == 3);
+
+    // Warning 1: UiNavHeader siteNam -> Did you mean 'siteName'?
+    assert(warnings[0] == "[Compiler Warning] Property 'siteNam' is not recognized on component 'UiNavHeader'. Did you mean 'siteName'?");
+
+    // Warning 2: UiImageCard titl -> Did you mean 'title'?
+    assert(warnings[1] == "[Compiler Warning] Property 'titl' is not recognized on component 'UiImageCard'. Did you mean 'title'?");
+
+    // Warning 3: UiImageCard completelyUnknownProperty -> No did-you-mean hint
+    assert(warnings[2] == "[Compiler Warning] Property 'completelyUnknownProperty' is not recognized on component 'UiImageCard'.");
+
+    std::cout << "testUnknownPropWarning passed." << std::endl;
+}
+
 int main() {
     testSingleInheritance();
     testMultiLevelInheritance();
     testChildBlockInheritance();
     testCircularDependency();
+    testUnknownPropWarning();
     std::cout << "All resolver tests passed." << std::endl;
     return 0;
 }
+
