@@ -2,8 +2,11 @@
 #include <string>
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 #include <vector>
-#include "execute.hpp"
+#include <nlohmann/json.hpp>
+#include "../utils/fs_utils.hpp"
+#include "../veneer/html_validator.hpp"
 
 namespace fs = std::filesystem;
 
@@ -30,27 +33,120 @@ inline int runValidate(int argc, char** argv) {
         return 1;
     }
 
-    // Resolve the validate.js script path relative to the running binary
-    fs::path exePath = fs::absolute(argv[0]).parent_path();
-    fs::path scriptPath = exePath / "scripts/validate.js";
-    if (!fs::exists(scriptPath)) {
-        scriptPath = exePath / "src/scripts/validate.js";
-    }
-    if (!fs::exists(scriptPath)) {
-        scriptPath = exePath / "../src/scripts/validate.js";
-    }
-
-    if (!fs::exists(scriptPath)) {
-        std::cerr << "[Error] Validation helper script not found at: " << scriptPath << "\n";
+    if (!fs::exists(manifestPath) || !fs::exists(snapshotPath)) {
+        std::cerr << "[Error] File not found: " << manifestPath << " or " << snapshotPath << "\n";
         return 1;
     }
 
-    std::vector<std::string> args = { scriptPath.string(), manifestPath, "--against", snapshotPath };
-    if (isJson) {
-        args.push_back("--json");
-    }
+    try {
+        std::string manifestJson = readTextFile(manifestPath);
+        std::string htmlContent = readTextFile(snapshotPath);
 
-    return safeExecute("node", args);
+        nlohmann::json results = HtmlValidator::validate(manifestJson, htmlContent);
+
+        if (results.contains("error")) {
+            std::cerr << "[Error] " << results["error"].get<std::string>() << "\n";
+            return 1;
+        }
+
+        int totalPass = 0;
+        int totalFail = 0;
+
+        if (results.contains("reconstructs") && results["reconstructs"].is_array()) {
+            for (const auto& recon : results["reconstructs"]) {
+                std::string status = recon.value("status", "FAIL");
+                if (status == "PASS") totalPass++; else totalFail++;
+
+                if (recon.contains("children") && recon["children"].is_array()) {
+                    for (const auto& child : recon["children"]) {
+                        std::string cStatus = child.value("status", "FAIL");
+                        if (cStatus == "PASS") totalPass++; else totalFail++;
+                    }
+                }
+            }
+        }
+
+        if (results.contains("components") && results["components"].is_array()) {
+            for (const auto& comp : results["components"]) {
+                std::string status = comp.value("status", "FAIL");
+                if (status == "PASS") totalPass++; else totalFail++;
+            }
+        }
+
+        if (isJson) {
+            std::cout << results.dump(2) << "\n";
+        } else {
+            std::cout << "===========================================\n";
+            std::cout << "SPM Validate Results\n";
+            std::cout << "===========================================\n";
+
+            if (results.contains("reconstructs") && results["reconstructs"].is_array()) {
+                for (const auto& recon : results["reconstructs"]) {
+                    std::string status = recon.value("status", "FAIL");
+                    std::string icon = (status == "PASS") ? "✅" : "❌";
+                    std::string containerSelector = recon.value("containerSelector", "");
+                    int matched = recon.value("matched", 0);
+                    std::cout << icon << " Reconstruct: " << containerSelector
+                              << " -> " << status << " (" << matched << " match)\n";
+
+                    if (recon.contains("binds") && recon["binds"].is_array()) {
+                        for (const auto& bind : recon["binds"]) {
+                            std::string bStatus = bind.value("status", "FAIL");
+                            std::string bIcon = (bStatus == "PASS") ? "  ├─ ✅" : "  ├─ ❌";
+                            std::string key = bind.value("key", "");
+                            std::string rule = bind.value("rule", "");
+                            std::string valStr = "null";
+                            if (bind.contains("value") && !bind["value"].is_null()) {
+                                if (bind["value"].is_string()) {
+                                    valStr = bind["value"].get<std::string>();
+                                } else {
+                                    valStr = bind["value"].dump();
+                                }
+                            }
+                            std::cout << bIcon << " Bind \"" << key << "\": \""
+                                      << rule << "\" -> \"" << valStr << "\"\n";
+                        }
+                    }
+
+                    if (recon.contains("children") && recon["children"].is_array()) {
+                        for (const auto& child : recon["children"]) {
+                            std::string cStatus = child.value("status", "FAIL");
+                            std::string cIcon = (cStatus == "PASS") ? "  ├─ ✅" : "  ├─ ❌";
+                            std::string name = child.value("name", "");
+                            std::string selector = child.value("selector", "");
+                            int cMatched = child.value("matched", 0);
+                            std::cout << cIcon << " Child \"" << name << "\": \""
+                                      << selector << "\" -> " << cStatus
+                                      << " (" << cMatched << " matches)\n";
+                        }
+                    }
+                }
+            }
+
+            if (results.contains("components") && results["components"].is_array()) {
+                for (const auto& comp : results["components"]) {
+                    std::string status = comp.value("status", "FAIL");
+                    std::string icon = (status == "PASS") ? "✅" : "❌";
+                    std::string selector = comp.value("selector", "");
+                    std::string action = comp.value("action", "");
+                    int cMatched = comp.value("matched", 0);
+                    std::cout << icon << " Component Selector: \"" << selector
+                              << "\" [" << action << "] -> " << status
+                              << " (" << cMatched << " matches)\n";
+                }
+            }
+
+            std::cout << "===========================================\n";
+            std::cout << "Summary: " << totalPass << " Passed, " << totalFail << " Failed\n";
+            std::cout << "===========================================\n";
+        }
+
+        if (totalFail > 0) return 1;
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "[Error] Validation failed: " << e.what() << "\n";
+        return 1;
+    }
 }
 
 } // namespace veneer
