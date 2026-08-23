@@ -201,21 +201,25 @@ try {
               itemsBinds: []
             };
 
+            let allItemsPassed = childItems.length > 0;
             childItems.forEach((item, index) => {
               const itemBinds = [];
               if (child.propsMap) {
                 for (const [key, rule] of Object.entries(child.propsMap)) {
                   const extracted = extractValue(item, rule);
+                  const isBindPass = extracted !== null;
+                  if (!isBindPass) allItemsPassed = false;
                   itemBinds.push({
                     key,
                     rule,
-                    status: extracted !== null ? 'PASS' : 'FAIL',
+                    status: isBindPass ? 'PASS' : 'FAIL',
                     value: extracted
                   });
                 }
               }
               childResult.itemsBinds.push(itemBinds);
             });
+            childResult.status = allItemsPassed ? 'PASS' : 'FAIL';
 
             reconResult.children.push(childResult);
           }
