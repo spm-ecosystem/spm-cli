@@ -75,7 +75,7 @@ inline std::string decodeHtmlEntities(const std::string& input) {
                     } catch (...) {
                         valid = false;
                     }
-                    if (valid) {
+                    if (valid && cp <= 0x10FFFF) {
                         result += codePointToUtf8(cp);
                         i = semi + 1;
                         continue;
@@ -945,7 +945,7 @@ public:
             if (spmIdOpt.has_value() && !spmIdOpt.value().empty()) {
                 spmId = spmIdOpt.value();
             } else {
-                static std::mt19937 gen(1337);
+                thread_local std::mt19937 gen(std::random_device{}());
                 static const char charset[] = "0123456789abcdefghijklmnopqrstuvwxyz";
                 std::string randStr;
                 for (int i = 0; i < 7; ++i) {
