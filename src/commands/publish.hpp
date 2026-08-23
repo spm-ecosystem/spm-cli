@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "../utils/fs_utils.hpp"
 #include "../utils/css_bundler.hpp"
+#include "execute.hpp"
 
 namespace fs = std::filesystem;
 
@@ -46,14 +47,12 @@ inline int runPublish(const std::string& manifestPath = "manifest.json") {
             fs::remove_all(tempWorkspace);
         }
 
-        std::string cmdClone = "git clone --depth 1 --filter=blob:none --sparse " + targetRepoUrl + " " + tempWorkspace.string() + " -q";
-        if (std::system(cmdClone.c_str()) != 0) {
+        if (safeExecute("git", {"clone", "--depth", "1", "--filter=blob:none", "--sparse", targetRepoUrl, tempWorkspace.string(), "-q"}) != 0) {
             std::cerr << "[Error] Failed to connect to repository. Check your git permissions.\n";
             return 1;
         }
 
-        std::string cmdCheckout = "git -C " + tempWorkspace.string() + " checkout -b " + branchName + " -q";
-        std::system(cmdCheckout.c_str());
+        safeExecute("git", {"-C", tempWorkspace.string(), "checkout", "-b", branchName, "-q"});
 
         fs::path targetFolder = tempWorkspace / targetUrl / themeName;
         fs::create_directories(targetFolder);
@@ -89,14 +88,10 @@ inline int runPublish(const std::string& manifestPath = "manifest.json") {
         }
 
         std::cout << "[Publish] Pushing to remote registry...\n";
-        std::string cmdAdd = "git -C " + tempWorkspace.string() + " add --sparse .";
-        std::string cmdCommit = "git -C " + tempWorkspace.string() + " commit -m \"feat(theme): publish " + themeName + " for " + targetUrl + "\" -q";
-        std::string cmdPush = "git -C " + tempWorkspace.string() + " push -u origin " + branchName + " -q";
-
-        std::system(cmdAdd.c_str());
-        std::system(cmdCommit.c_str()); 
+        safeExecute("git", {"-C", tempWorkspace.string(), "add", "--sparse", "."});
+        safeExecute("git", {"-C", tempWorkspace.string(), "commit", "-m", "feat(theme): publish " + themeName + " for " + targetUrl, "-q"});
         
-        if (std::system(cmdPush.c_str()) != 0) {
+        if (safeExecute("git", {"-C", tempWorkspace.string(), "push", "-u", "origin", branchName, "-q"}) != 0) {
             std::cerr << "[Error] Failed to push to remote repository.\n";
             fs::remove_all(tempWorkspace); 
             return 1;
