@@ -21,6 +21,7 @@ enum class TokenType {
     KeywordVariables,
     KeywordStyles,
     KeywordScope,
+    KeywordShadow,
     Arrow,
     Identifier,
     StringLiteral,
@@ -46,6 +47,7 @@ inline const char* tokenTypeToString(TokenType type) {
         case TokenType::KeywordVariables:   return "KeywordVariables";
         case TokenType::KeywordStyles:      return "KeywordStyles";
         case TokenType::KeywordScope:       return "KeywordScope";
+        case TokenType::KeywordShadow:      return "KeywordShadow";
         case TokenType::Arrow:              return "Arrow";
         case TokenType::Identifier:         return "Identifier";
         case TokenType::StringLiteral:      return "StringLiteral";
@@ -253,6 +255,7 @@ private:
         if (text == "variables")   return TokenType::KeywordVariables;
         if (text == "styles")      return TokenType::KeywordStyles;
         if (text == "scope")       return TokenType::KeywordScope;
+        if (text == "shadow")      return TokenType::KeywordShadow;
         return std::nullopt;
     }
 };

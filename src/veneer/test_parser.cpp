@@ -113,8 +113,74 @@ void test_parser_error() {
     }
 }
 
+void test_parser_shadow_dom() {
+    // Helper unit tests
+    bool isShadow = false;
+    std::string host, inner;
+
+    Parser::parseShadowSelectorInfo("shadow:custom-element->.btn-inner", isShadow, host, inner);
+    assert(isShadow == true);
+    assert(host == "custom-element");
+    assert(inner == ".btn-inner");
+
+    Parser::parseShadowSelectorInfo("shadow: custom-host .sub-item", isShadow, host, inner);
+    assert(isShadow == true);
+    assert(host == "custom-host");
+    assert(inner == ".sub-item");
+
+    Parser::parseShadowSelectorInfo("shadow: standalone-host", isShadow, host, inner);
+    assert(isShadow == true);
+    assert(host == "standalone-host");
+    assert(inner == "");
+
+    Parser::parseShadowSelectorInfo(".regular #selector", isShadow, host, inner);
+    assert(isShadow == false);
+    assert(host == "");
+    assert(inner == "");
+
+    // AST integration test
+    std::string source = R"raw(
+        selector "shadow: custom-card->.header" {
+            action: "highlight";
+            color: "gold";
+        }
+
+        reconstruct "shadow: my-host->#root-slot" -> MyCustomView {
+            child shadowChild extends BaseChild {
+                selector: "shadow: nested-host .content";
+                scope: "shadow-scope";
+            }
+        }
+    )raw";
+
+    Lexer lexer(source);
+    Parser parser(lexer.tokenize());
+    ASTNode ast = parser.parse();
+
+    assert(ast.selectors.size() == 1);
+    assert(ast.selectors[0].selector == "shadow: custom-card->.header");
+    assert(ast.selectors[0].isShadow == true);
+    assert(ast.selectors[0].shadowHost == "custom-card");
+    assert(ast.selectors[0].innerSelector == ".header");
+
+    assert(ast.reconstructs.size() == 1);
+    assert(ast.reconstructs[0].selector == "shadow: my-host->#root-slot");
+    assert(ast.reconstructs[0].isShadow == true);
+    assert(ast.reconstructs[0].shadowHost == "my-host");
+    assert(ast.reconstructs[0].innerSelector == "#root-slot");
+    assert(ast.reconstructs[0].children.size() == 1);
+    assert(ast.reconstructs[0].children[0].name == "shadowChild");
+    assert(ast.reconstructs[0].children[0].selector == "shadow: nested-host .content");
+    assert(ast.reconstructs[0].children[0].isShadow == true);
+    assert(ast.reconstructs[0].children[0].shadowHost == "nested-host");
+    assert(ast.reconstructs[0].children[0].innerSelector == ".content");
+
+    std::cout << "All shadow DOM parser tests passed!" << std::endl;
+}
+
 int main() {
     test_parser();
     test_parser_error();
+    test_parser_shadow_dom();
     return 0;
 }

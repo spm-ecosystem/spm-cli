@@ -96,6 +96,14 @@ Line 2";
     assert(foundPipe);
     assert(foundMultiLineString);
 
+    std::cout << "=== Testing KeywordShadow ===" << std::endl;
+    veneer::Lexer shadowLexer("shadow");
+    auto shadowTokens = shadowLexer.tokenize();
+    assert(shadowTokens.size() == 2);
+    assert(shadowTokens[0].type == veneer::TokenType::KeywordShadow);
+    assert(shadowTokens[0].value == "shadow");
+    assert(std::string(veneer::tokenTypeToString(shadowTokens[0].type)) == "KeywordShadow");
+
     std::cout << "ALL LEXER TESTS PASSED SUCCESSFULLY!" << std::endl;
     return 0;
 }

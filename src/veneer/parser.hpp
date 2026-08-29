@@ -23,6 +23,9 @@ struct ASTChild {
     std::string selector;
     std::string extendsClass;
     std::string scope;
+    bool isShadow = false;
+    std::string shadowHost;
+    std::string innerSelector;
     std::vector<ASTProperty> properties;
     std::vector<ASTChild> children;
 };
@@ -44,12 +47,18 @@ struct SelectorNode {
     std::string selector;
     std::string component;
     std::string action;
+    bool isShadow = false;
+    std::string shadowHost;
+    std::string innerSelector;
     std::vector<ASTProperty> properties;
 };
 
 struct ReconstructNode {
     std::string selector;
     std::string component;
+    bool isShadow = false;
+    std::string shadowHost;
+    std::string innerSelector;
     std::vector<ASTProperty> properties;
     std::map<std::string, std::string> preservationSlots;
     std::string mediaQuery;
@@ -66,6 +75,35 @@ struct ASTNode {
 class Parser {
 public:
     explicit Parser(const std::vector<Token>& tokens) : tokens_(tokens), pos_(0) {}
+
+    static void parseShadowSelectorInfo(const std::string& rawSel, bool& outIsShadow, std::string& outHost, std::string& outInner) {
+        outIsShadow = false;
+        outHost.clear();
+        outInner.clear();
+
+        if (rawSel.find("shadow:") == 0 || rawSel.find("shadow: ") == 0) {
+            outIsShadow = true;
+            std::string rest = rawSel.substr(rawSel.find("shadow:") + 7);
+            while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front()))) rest.erase(rest.begin());
+
+            size_t arrowPos = rest.find("->");
+            if (arrowPos != std::string::npos) {
+                outHost = rest.substr(0, arrowPos);
+                outInner = rest.substr(arrowPos + 2);
+            } else {
+                size_t spacePos = rest.find(' ');
+                if (spacePos != std::string::npos) {
+                    outHost = rest.substr(0, spacePos);
+                    outInner = rest.substr(spacePos + 1);
+                } else {
+                    outHost = rest;
+                    outInner = "";
+                }
+            }
+            while (!outHost.empty() && std::isspace(static_cast<unsigned char>(outHost.back()))) outHost.pop_back();
+            while (!outInner.empty() && std::isspace(static_cast<unsigned char>(outInner.front()))) outInner.erase(outInner.begin());
+        }
+    }
 
     ASTNode parse() {
         ASTNode root;
@@ -146,7 +184,7 @@ private:
             match(TokenType::KeywordExtends) || match(TokenType::KeywordBind) ||
             match(TokenType::KeywordPreserve) || match(TokenType::KeywordChild) ||
             match(TokenType::KeywordVariables) || match(TokenType::KeywordStyles) ||
-            match(TokenType::KeywordScope)) {
+            match(TokenType::KeywordScope) || match(TokenType::KeywordShadow)) {
             std::string val(previous().value);
             if (previous().type == TokenType::StringLiteral) {
                 if ((val.rfind("R\"", 0) == 0 || val.rfind("r\"", 0) == 0) && val.back() == '"') {
@@ -222,6 +260,7 @@ private:
     SelectorNode parseSelector() {
         SelectorNode sel;
         sel.selector = parseStringOrIdentifier();
+        parseShadowSelectorInfo(sel.selector, sel.isShadow, sel.shadowHost, sel.innerSelector);
         if (match(TokenType::Arrow)) {
             sel.component = parseStringOrIdentifier();
         }
@@ -252,6 +291,7 @@ private:
             if (matchKeywordOrIdentifier(TokenType::KeywordSelector, "selector")) {
                 consume(TokenType::Colon, "Expected ':' after selector");
                 child.selector = parseStringOrIdentifier();
+                parseShadowSelectorInfo(child.selector, child.isShadow, child.shadowHost, child.innerSelector);
                 consume(TokenType::Semicolon, "Expected ';' after selector value");
             } else if (matchKeywordOrIdentifier(TokenType::KeywordScope, "scope")) {
                 consume(TokenType::Colon, "Expected ':' after scope");
@@ -270,6 +310,7 @@ private:
     ReconstructNode parseReconstruct() {
         ReconstructNode recon;
         recon.selector = parseStringOrIdentifier();
+        parseShadowSelectorInfo(recon.selector, recon.isShadow, recon.shadowHost, recon.innerSelector);
         consume(TokenType::Arrow, "Expected '->' after selector in reconstruct");
         recon.component = parseStringOrIdentifier();
         consume(TokenType::BraceOpen, "Expected '{' after reconstruct definition");
