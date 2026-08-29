@@ -22,6 +22,15 @@ void testKnownComponentsAndProps() {
     assert(ComponentSchemaRegistry::isKnownComponent("UiTable") == true);
     assert(ComponentSchemaRegistry::isKnownComponent("UiTagBadge") == true);
     assert(ComponentSchemaRegistry::isKnownComponent("UiToast") == true);
+    // Primitives
+    assert(ComponentSchemaRegistry::isKnownComponent("UiBox") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiFlexRow") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiFlexColumn") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiGrid") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiText") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiImage") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiLink") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiScrollBox") == true);
     assert(ComponentSchemaRegistry::isKnownComponent("CustomDiv") == false);
 
     // Known props on known components
@@ -30,11 +39,21 @@ void testKnownComponentsAndProps() {
     assert(ComponentSchemaRegistry::isValidProp("UiNavHeader", "sticky") == true);
     assert(ComponentSchemaRegistry::isValidProp("UiHeroLanding", "tagline") == true);
     assert(ComponentSchemaRegistry::isValidProp("UiToast", "message") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiImageCard", "linkUrl") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiSearchBar", "queryParamName") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiPostDetails", "tagGroups") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiModernGridPage", "mobileColumns") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiText", "content") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiImage", "src") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiLink", "href") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiScrollBox", "maxHeight") == true);
 
     // Unknown props on known components
     assert(ComponentSchemaRegistry::isValidProp("UiNavHeader", "invalidFakeProp") == false);
     assert(ComponentSchemaRegistry::isValidProp("UiHeroLanding", "nonExistent") == false);
     assert(ComponentSchemaRegistry::isValidProp("UiToast", "nonExistentProp") == false);
+    assert(ComponentSchemaRegistry::isValidProp("UiImageCard", "url") == false);
+    assert(ComponentSchemaRegistry::isValidProp("UiSearchBar", "paramName") == false);
 
     // Unknown components allow any prop gracefully
     assert(ComponentSchemaRegistry::isValidProp("CustomDiv", "anything") == true);
@@ -56,6 +75,13 @@ void testDidYouMeanSuggestions() {
     std::string hint3 = ComponentSchemaRegistry::getDidYouMean("UiNavHeader", "primarLnk"); // primaryLinks (distance 3)
     assert(hint3 == "primaryLinks");
 
+    // Replaced/renamed props
+    std::string hintImageCard = ComponentSchemaRegistry::getDidYouMean("UiImageCard", "url");
+    assert(hintImageCard == "linkUrl");
+
+    std::string hintSearchBar = ComponentSchemaRegistry::getDidYouMean("UiSearchBar", "paramName");
+    assert(hintSearchBar == "queryParamName");
+
     // Too far (> 3 distance) -> returns empty string
     std::string hintFar = ComponentSchemaRegistry::getDidYouMean("UiNavHeader", "completelyUnrelatedWordXYZ");
     assert(hintFar.empty());
@@ -69,9 +95,11 @@ void testDidYouMeanSuggestions() {
 
 void testSchemaMapIntegrity() {
     const auto& schemas = ComponentSchemaRegistry::getSchemaMap();
-    assert(schemas.size() == 17);
+    assert(schemas.size() == 25);
     assert(schemas.find("UiNavHeader") != schemas.end());
     assert(schemas.find("UiToast") != schemas.end());
+    assert(schemas.find("UiBox") != schemas.end());
+    assert(schemas.find("UiScrollBox") != schemas.end());
     std::cout << "testSchemaMapIntegrity passed.\n";
 }
 

@@ -13,23 +13,31 @@ class ComponentSchemaRegistry {
 public:
     static const std::unordered_map<std::string, std::unordered_set<std::string>>& getSchemaMap() {
         static const std::unordered_map<std::string, std::unordered_set<std::string>> schemas = {
-            {"UiNavHeader", {"siteName", "logoUrl", "logoHref", "primaryLinks", "secondaryLinks", "items", "layout", "hideOnMobile", "mobileBreakpoint", "sticky", "className", "style"}},
-            {"UiHeroLanding", {"siteName", "logoUrl", "logoHref", "tagline", "subtext", "ctaLabel", "ctaUrl", "searchPlaceholder", "searchSubmitUrl", "searchParamName", "primaryLinks"}},
-            {"UiTableListPage", {"pageTitle", "tableRows", "columns", "pageLinks", "height", "className", "style"}},
-            {"UiModernGridPage", {"pageTitle", "items", "tagGroups", "pageLinks", "showSearch", "searchPlaceholder", "searchSubmitUrl", "sidebarHtml", "className", "style"}},
-            {"UiCommentListPage", {"pageTitle", "threads", "showThumbnail", "className", "style"}},
-            {"UiDashboardPage", {"pageTitle", "widgets", "className", "style"}},
-            {"UiImageCard", {"title", "imageUrl", "url", "tags", "aspectRatio", "fallbackUrl", "lazy", "className", "style"}},
-            {"UiImageViewer", {"src", "imageUrl", "alt", "title", "fit", "className", "style"}},
-            {"UiPaginationBar", {"pageLinks", "paramName", "className", "style"}},
-            {"UiPostDetails", {"title", "subhead", "imageUrl", "author", "date", "tags", "bodyHtml", "primaryLinks", "className", "style"}},
-            {"UiScrollPanel", {"tags", "buttons", "statisticsHtml", "showSearch", "searchPlaceholder", "searchSubmitUrl", "searchParamName", "width", "className", "style"}},
-            {"UiSearchBar", {"placeholder", "submitUrl", "paramName", "hiddenFields", "className", "style"}},
-            {"UiSplitLayout", {"imageSlot", "tags", "buttons", "statisticsHtml", "sidebarWidth", "sidebarSide", "imageFit", "height", "splitButtons", "showSearch", "searchPlaceholder", "searchSubmitUrl", "mainHtml", "className", "style"}},
-            {"UiStatsDashboard", {"title", "stats", "className", "style"}},
-            {"UiTable", {"columns", "data", "sortKey", "sortDirection", "className", "style"}},
-            {"UiTagBadge", {"label", "count", "href", "addUrl", "removeUrl", "variant", "className", "style"}},
-            {"UiToast", {"message", "type", "visible", "duration", "className", "style"}}
+            {"UiBox", {"children", "className", "id", "key", "style"}},
+            {"UiCommentListPage", {"children", "className", "height", "id", "key", "pageLinks", "pageTitle", "style", "threads"}},
+            {"UiDashboardPage", {"cards", "children", "className", "height", "id", "key", "pageTitle", "style", "subTitle"}},
+            {"UiFlexColumn", {"children", "className", "id", "key", "style"}},
+            {"UiFlexRow", {"children", "className", "id", "key", "style"}},
+            {"UiGrid", {"children", "className", "id", "key", "style"}},
+            {"UiHeroLanding", {"children", "className", "ctaLabel", "ctaUrl", "id", "key", "logoHref", "logoUrl", "primaryLinks", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "siteName", "style", "subtext", "tagline"}},
+            {"UiImage", {"alt", "children", "className", "id", "key", "src", "style"}},
+            {"UiImageCard", {"aspectRatio", "children", "className", "id", "imageFit", "imageUrl", "key", "linkUrl", "loading", "showTitle", "style", "title", "width"}},
+            {"UiImageViewer", {"alt", "background", "children", "className", "fit", "id", "key", "src", "style"}},
+            {"UiLink", {"children", "className", "href", "id", "key", "style"}},
+            {"UiModernGridPage", {"children", "className", "height", "hideSidebarOnMobile", "id", "items", "key", "mobileBreakpoint", "mobileCardAspectRatio", "mobileColumns", "mobileGap", "mobileHeaderSticky", "mobilePadding", "mobileShowHeader", "mobileShowPagination", "onLoadMore", "pageLinks", "pageTitle", "searchDefaultValue", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "sidebarHtml", "sidebarWidth", "style", "tagGroups", "tags"}},
+            {"UiNavHeader", {"children", "className", "hideOnMobile", "id", "items", "key", "layout", "logoHref", "logoUrl", "mobileBreakpoint", "primaryLinks", "secondaryLinks", "siteName", "sticky", "style"}},
+            {"UiPaginationBar", {"children", "className", "id", "key", "pageLinks", "paramName", "style"}},
+            {"UiPostDetails", {"buttons", "children", "className", "id", "imageUrl", "key", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "statisticsHtml", "style", "tagGroups", "tags"}},
+            {"UiScrollBox", {"children", "className", "height", "id", "key", "maxHeight", "overflow", "overflowX", "overflowY", "style"}},
+            {"UiScrollPanel", {"buttons", "children", "className", "id", "key", "onClose", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "statisticsHtml", "style", "tags", "width"}},
+            {"UiSearchBar", {"children", "className", "defaultValue", "hiddenFields", "id", "key", "method", "placeholder", "queryParamName", "style", "submitUrl"}},
+            {"UiSplitLayout", {"buttons", "children", "className", "height", "id", "imageFit", "imageSlot", "key", "mainHtml", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "sidebarSide", "sidebarWidth", "splitButtons", "statisticsHtml", "style", "tags"}},
+            {"UiStatsDashboard", {"children", "className", "dateRangeText", "height", "id", "key", "navLinks", "pageTitle", "sections", "style"}},
+            {"UiTable", {"children", "className", "columns", "data", "id", "key", "onRowClick", "onSort", "sortDirection", "sortKey", "style"}},
+            {"UiTableListPage", {"children", "className", "columns", "height", "id", "key", "onLoadMore", "pageLinks", "pageTitle", "style", "tableRows"}},
+            {"UiTagBadge", {"addUrl", "children", "className", "count", "href", "id", "key", "label", "removeUrl", "style", "variant"}},
+            {"UiText", {"children", "className", "content", "id", "key", "style"}},
+            {"UiToast", {"children", "className", "id", "key", "message", "onClose", "style", "type"}}
         };
         return schemas;
     }
