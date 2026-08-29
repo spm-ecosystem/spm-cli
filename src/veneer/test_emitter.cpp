@@ -178,6 +178,93 @@ void testJsonMerging() {
 
     std::cout << "testJsonMerging passed." << std::endl;
 }
+
+void testShadowEmitter() {
+    std::string code = R"raw(
+        selector "shadow: my-card->.btn-action" -> CardActionBtn {
+            label: "Click Me";
+        }
+        selector "shadow: standalone-host" {
+            action: "hide";
+        }
+        selector ".standard-selector" {
+            action: "hide";
+        }
+        reconstruct "shadow: app-layout->#content-slot" -> AppLayoutComp {
+            preserve {
+                header: "#header";
+            }
+            child navChild {
+                selector: "shadow: nav-host .nav-item";
+                scope: "container";
+                label: "Navigation";
+            }
+            child standardChild {
+                selector: ".regular-item";
+            }
+        }
+    )raw";
+
+    Lexer lexer(code);
+    Parser parser(lexer.tokenize());
+    ASTNode ast = parser.parse();
+    Resolver resolver(ast);
+    resolver.resolve();
+
+    std::string jsonStr = Emitter::emit(ast);
+    nlohmann::json j = nlohmann::json::parse(jsonStr);
+
+    assert(j.contains("components"));
+    assert(j["components"].size() == 3);
+
+    // Component 0: Shadow selector with host and inner
+    assert(j["components"][0]["selector"] == "shadow: my-card->.btn-action");
+    assert(j["components"][0]["name"] == "CardActionBtn");
+    assert(j["components"][0]["isShadow"] == true);
+    assert(j["components"][0]["shadowHost"] == "my-card");
+    assert(j["components"][0]["innerSelector"] == ".btn-action");
+    assert(j["components"][0]["props"]["label"] == "Click Me");
+
+    // Component 1: Shadow selector with standalone host
+    assert(j["components"][1]["selector"] == "shadow: standalone-host");
+    assert(j["components"][1]["action"] == "hide");
+    assert(j["components"][1]["isShadow"] == true);
+    assert(j["components"][1]["shadowHost"] == "standalone-host");
+    assert(!j["components"][1].contains("innerSelector") || j["components"][1]["innerSelector"] == "");
+
+    // Component 2: Standard non-shadow selector
+    assert(j["components"][2]["selector"] == ".standard-selector");
+    assert(!j["components"][2].contains("isShadow") || j["components"][2]["isShadow"] == false);
+    assert(!j["components"][2].contains("shadowHost"));
+
+    // Reconstructs
+    assert(j.contains("reconstructs"));
+    assert(j["reconstructs"].size() == 1);
+    const auto& recon = j["reconstructs"][0];
+    assert(recon["containerSelector"] == "shadow: app-layout->#content-slot");
+    assert(recon["layoutComponent"] == "AppLayoutComp");
+    assert(recon["isShadow"] == true);
+    assert(recon["shadowHost"] == "app-layout");
+    assert(recon["innerSelector"] == "#content-slot");
+
+    assert(recon["children"].size() == 2);
+    // Child 0: Shadow child
+    const auto& child0 = recon["children"][0];
+    assert(child0["name"] == "navChild");
+    assert(child0["selector"] == "shadow: nav-host .nav-item");
+    assert(child0["isShadow"] == true);
+    assert(child0["shadowHost"] == "nav-host");
+    assert(child0["innerSelector"] == ".nav-item");
+
+    // Child 1: Standard non-shadow child
+    const auto& child1 = recon["children"][1];
+    assert(child1["name"] == "standardChild");
+    assert(child1["selector"] == ".regular-item");
+    assert(!child1.contains("isShadow") || child1["isShadow"] == false);
+    assert(!child1.contains("shadowHost"));
+
+    std::cout << "testShadowEmitter passed." << std::endl;
+}
 void testCssBundler() {
     fs::path tempDir = fs::current_path() / "spm_test_css";
     fs::create_directories(tempDir);
@@ -228,6 +315,7 @@ int main() {
     testSelectorEmitter();
     testReconstructEmitter();
     testJsonMerging();
+    testShadowEmitter();
     testCssBundler();
     testFileWatcher();
     std::cout << "All emitter tests passed successfully!" << std::endl;

@@ -96,13 +96,40 @@ Line 2";
     assert(foundPipe);
     assert(foundMultiLineString);
 
-    std::cout << "=== Testing KeywordShadow ===" << std::endl;
+    std::cout << "=== Testing KeywordShadow and Shadow Modifier Selectors ===" << std::endl;
     veneer::Lexer shadowLexer("shadow");
     auto shadowTokens = shadowLexer.tokenize();
     assert(shadowTokens.size() == 2);
     assert(shadowTokens[0].type == veneer::TokenType::KeywordShadow);
     assert(shadowTokens[0].value == "shadow");
     assert(std::string(veneer::tokenTypeToString(shadowTokens[0].type)) == "KeywordShadow");
+
+    constexpr std::string_view shadowSpec = R"(
+        selector "shadow: host-elem->.btn" {
+            shadow "mode";
+        }
+        reconstruct "shadow: custom-host .container" -> ShadowView {
+            child shadowChild {
+                selector: "shadow: nested-host";
+            }
+        }
+    )";
+    veneer::Lexer specLexer(shadowSpec);
+    auto specTokens = specLexer.tokenize();
+    bool foundShadowKeyword = false;
+    size_t shadowSelectorCount = 0;
+
+    for (const auto& tok : specTokens) {
+        if (tok.type == veneer::TokenType::KeywordShadow) {
+            foundShadowKeyword = true;
+        }
+        if (tok.type == veneer::TokenType::StringLiteral && tok.value.find("shadow:") != std::string_view::npos) {
+            shadowSelectorCount++;
+        }
+    }
+
+    assert(foundShadowKeyword);
+    assert(shadowSelectorCount == 3);
 
     std::cout << "ALL LEXER TESTS PASSED SUCCESSFULLY!" << std::endl;
     return 0;

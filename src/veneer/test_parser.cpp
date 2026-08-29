@@ -145,10 +145,21 @@ void test_parser_shadow_dom() {
             color: "gold";
         }
 
+        selector "shadow: host-badge" -> BadgeComponent {
+            label: "Verified";
+        }
+
+        selector ".normal-element" {
+            action: "hide";
+        }
+
         reconstruct "shadow: my-host->#root-slot" -> MyCustomView {
             child shadowChild extends BaseChild {
                 selector: "shadow: nested-host .content";
                 scope: "shadow-scope";
+            }
+            child normalChild {
+                selector: ".sub-list";
             }
         }
     )raw";
@@ -157,23 +168,41 @@ void test_parser_shadow_dom() {
     Parser parser(lexer.tokenize());
     ASTNode ast = parser.parse();
 
-    assert(ast.selectors.size() == 1);
+    assert(ast.selectors.size() == 3);
     assert(ast.selectors[0].selector == "shadow: custom-card->.header");
     assert(ast.selectors[0].isShadow == true);
     assert(ast.selectors[0].shadowHost == "custom-card");
     assert(ast.selectors[0].innerSelector == ".header");
+
+    assert(ast.selectors[1].selector == "shadow: host-badge");
+    assert(ast.selectors[1].component == "BadgeComponent");
+    assert(ast.selectors[1].isShadow == true);
+    assert(ast.selectors[1].shadowHost == "host-badge");
+    assert(ast.selectors[1].innerSelector.empty());
+
+    assert(ast.selectors[2].selector == ".normal-element");
+    assert(ast.selectors[2].isShadow == false);
+    assert(ast.selectors[2].shadowHost.empty());
+    assert(ast.selectors[2].innerSelector.empty());
 
     assert(ast.reconstructs.size() == 1);
     assert(ast.reconstructs[0].selector == "shadow: my-host->#root-slot");
     assert(ast.reconstructs[0].isShadow == true);
     assert(ast.reconstructs[0].shadowHost == "my-host");
     assert(ast.reconstructs[0].innerSelector == "#root-slot");
-    assert(ast.reconstructs[0].children.size() == 1);
+    assert(ast.reconstructs[0].children.size() == 2);
+    
     assert(ast.reconstructs[0].children[0].name == "shadowChild");
     assert(ast.reconstructs[0].children[0].selector == "shadow: nested-host .content");
     assert(ast.reconstructs[0].children[0].isShadow == true);
     assert(ast.reconstructs[0].children[0].shadowHost == "nested-host");
     assert(ast.reconstructs[0].children[0].innerSelector == ".content");
+
+    assert(ast.reconstructs[0].children[1].name == "normalChild");
+    assert(ast.reconstructs[0].children[1].selector == ".sub-list");
+    assert(ast.reconstructs[0].children[1].isShadow == false);
+    assert(ast.reconstructs[0].children[1].shadowHost.empty());
+    assert(ast.reconstructs[0].children[1].innerSelector.empty());
 
     std::cout << "All shadow DOM parser tests passed!" << std::endl;
 }
