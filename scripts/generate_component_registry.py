@@ -23,6 +23,9 @@ def parse_ts_interfaces(components_dir: Path) -> dict[str, set[str]]:
     universal_props = {"className", "style", "id", "children", "key"}
 
     for ts_file in ts_files:
+        path_str = str(ts_file)
+        if "node_modules" in path_str or "dist" in path_str:
+            continue
         content = ts_file.read_text(encoding="utf-8")
         for match in interface_pat.finditer(content):
             if_name = match.group(1)
