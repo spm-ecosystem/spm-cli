@@ -15,6 +15,11 @@ public:
         nlohmann::json childObj = nlohmann::json::object();
         childObj["name"] = child.name;
         childObj["selector"] = child.selector;
+        if (child.isShadow) {
+            childObj["isShadow"] = true;
+            if (!child.shadowHost.empty()) childObj["shadowHost"] = child.shadowHost;
+            if (!child.innerSelector.empty()) childObj["innerSelector"] = child.innerSelector;
+        }
         if (!child.scope.empty() && child.scope != "container") {
             childObj["scope"] = child.scope;
         }
@@ -89,6 +94,11 @@ public:
         for (const auto& sel : ast.selectors) {
             nlohmann::json selObj = nlohmann::json::object();
             selObj["selector"] = sel.selector;
+            if (sel.isShadow) {
+                selObj["isShadow"] = true;
+                if (!sel.shadowHost.empty()) selObj["shadowHost"] = sel.shadowHost;
+                if (!sel.innerSelector.empty()) selObj["innerSelector"] = sel.innerSelector;
+            }
             if (!sel.component.empty()) {
                 selObj["name"] = sel.component;
             }
@@ -127,6 +137,11 @@ public:
             nlohmann::json reconObj = nlohmann::json::object();
             reconObj["containerSelector"] = recon.selector;
             reconObj["layoutComponent"] = recon.component;
+            if (recon.isShadow) {
+                reconObj["isShadow"] = true;
+                if (!recon.shadowHost.empty()) reconObj["shadowHost"] = recon.shadowHost;
+                if (!recon.innerSelector.empty()) reconObj["innerSelector"] = recon.innerSelector;
+            }
 
             if (!recon.mediaQuery.empty()) {
                 reconObj["mediaQuery"] = recon.mediaQuery;

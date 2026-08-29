@@ -140,4 +140,113 @@ inline std::optional<std::string> applyPipes(const std::string& initialVal, cons
     return currentVal;
 }
 
+struct ShadowSelectorInfo {
+    bool isShadow = false;
+    std::string shadowHost;
+    std::string innerSelector;
+};
+
+inline ShadowSelectorInfo parseShadowSelector(const std::string& rawSel) {
+    ShadowSelectorInfo info;
+    if (rawSel.find("shadow:") == 0 || rawSel.find("shadow: ") == 0) {
+        info.isShadow = true;
+        std::string rest = rawSel.substr(rawSel.find("shadow:") + 7);
+        while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front()))) rest.erase(rest.begin());
+
+        size_t arrowPos = rest.find("->");
+        if (arrowPos != std::string::npos) {
+            info.shadowHost = rest.substr(0, arrowPos);
+            info.innerSelector = rest.substr(arrowPos + 2);
+        } else {
+            size_t spacePos = rest.find(' ');
+            if (spacePos != std::string::npos) {
+                info.shadowHost = rest.substr(0, spacePos);
+                info.innerSelector = rest.substr(spacePos + 1);
+            } else {
+                info.shadowHost = rest;
+                info.innerSelector = "";
+            }
+        }
+        while (!info.shadowHost.empty() && std::isspace(static_cast<unsigned char>(info.shadowHost.back()))) info.shadowHost.pop_back();
+        while (!info.innerSelector.empty() && std::isspace(static_cast<unsigned char>(info.innerSelector.front()))) info.innerSelector.erase(info.innerSelector.begin());
+    }
+    return info;
+}
+
+template <typename ElementPtr>
+inline ElementPtr queryShadowSelector(const ElementPtr& root, const std::string& selector, bool isShadow = false, const std::string& shadowHost = "", const std::string& innerSelector = "") {
+    if (!root) return nullptr;
+    if (isShadow || selector.rfind("shadow:", 0) == 0) {
+        std::string host = shadowHost;
+        std::string inner = innerSelector;
+        if (host.empty() && inner.empty()) {
+            auto parsed = parseShadowSelector(selector);
+            host = parsed.shadowHost;
+            inner = parsed.innerSelector;
+        }
+        auto hostEl = root->querySelector(host);
+        if (!hostEl) return nullptr;
+        if (inner.empty()) return hostEl;
+        return hostEl->querySelector(inner);
+    }
+    return root->querySelector(selector);
+}
+
+template <typename ElementPtr>
+inline std::vector<ElementPtr> queryShadowSelectorAll(const ElementPtr& root, const std::string& selector, bool isShadow = false, const std::string& shadowHost = "", const std::string& innerSelector = "") {
+    std::vector<ElementPtr> results;
+    if (!root) return results;
+    if (isShadow || selector.rfind("shadow:", 0) == 0) {
+        std::string host = shadowHost;
+        std::string inner = innerSelector;
+        if (host.empty() && inner.empty()) {
+            auto parsed = parseShadowSelector(selector);
+            host = parsed.shadowHost;
+            inner = parsed.innerSelector;
+        }
+        auto hostEl = root->querySelector(host);
+        if (!hostEl) return results;
+        if (inner.empty()) {
+            results.push_back(hostEl);
+            return results;
+        }
+        return hostEl->querySelectorAll(inner);
+    }
+    return root->querySelectorAll(selector);
+}
+
+template <typename ElementPtr>
+inline nlohmann::json extractReconstructData(const nlohmann::json& recon, const ElementPtr& document) {
+    nlohmann::json result = nlohmann::json::object();
+    if (!document) {
+        result["matched"] = 0;
+        result["status"] = "FAIL";
+        return result;
+    }
+
+    std::string containerSelector = recon.value("containerSelector", "");
+    bool isShadow = recon.value("isShadow", false);
+    std::string shadowHost = recon.value("shadowHost", "");
+    std::string innerSelector = recon.value("innerSelector", "");
+
+    auto container = queryShadowSelector(document, containerSelector, isShadow, shadowHost, innerSelector);
+    if (!container) {
+        result["containerSelector"] = containerSelector;
+        result["matched"] = 0;
+        result["status"] = "FAIL";
+        return result;
+    }
+
+    result["containerSelector"] = containerSelector;
+    result["matched"] = 1;
+    result["status"] = "PASS";
+    if (isShadow) {
+        result["isShadow"] = true;
+        if (!shadowHost.empty()) result["shadowHost"] = shadowHost;
+        if (!innerSelector.empty()) result["innerSelector"] = innerSelector;
+    }
+
+    return result;
+}
+
 } // namespace veneer

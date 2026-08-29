@@ -614,6 +614,16 @@ public:
 
 inline std::vector<std::shared_ptr<HTMLElement>> HTMLElement::querySelectorAll(const std::string& selector) {
     std::vector<std::shared_ptr<HTMLElement>> results;
+    if (selector.rfind("shadow:", 0) == 0) {
+        auto parsed = parseShadowSelector(selector);
+        auto hostEl = querySelector(parsed.shadowHost);
+        if (!hostEl) return results;
+        if (parsed.innerSelector.empty()) {
+            results.push_back(hostEl);
+            return results;
+        }
+        return hostEl->querySelectorAll(parsed.innerSelector);
+    }
     auto chains = CssSelectorEngine::parseSelectorList(selector);
     if (chains.empty()) return results;
 
@@ -997,10 +1007,19 @@ public:
         if (manifest.contains("reconstructs") && manifest["reconstructs"].is_array()) {
             for (const auto& recon : manifest["reconstructs"]) {
                 std::string containerSelector = recon.value("containerSelector", "");
-                auto container = document->querySelector(containerSelector);
+                bool isShadow = recon.value("isShadow", false);
+                std::string shadowHost = recon.value("shadowHost", "");
+                std::string innerSelector = recon.value("innerSelector", "");
+
+                auto container = queryShadowSelector(document, containerSelector, isShadow, shadowHost, innerSelector);
 
                 nlohmann::json reconResult = nlohmann::json::object();
                 reconResult["containerSelector"] = containerSelector;
+                if (isShadow) {
+                    reconResult["isShadow"] = true;
+                    if (!shadowHost.empty()) reconResult["shadowHost"] = shadowHost;
+                    if (!innerSelector.empty()) reconResult["innerSelector"] = innerSelector;
+                }
                 reconResult["status"] = container ? "PASS" : "FAIL";
                 reconResult["matched"] = container ? 1 : 0;
                 reconResult["children"] = nlohmann::json::array();
@@ -1033,14 +1052,21 @@ public:
                             std::string childName = child.value("name", "");
                             std::string childSelector = child.value("selector", "");
                             std::string scope = child.value("scope", "container");
+                            bool childIsShadow = child.value("isShadow", false);
+                            std::string childShadowHost = child.value("shadowHost", "");
+                            std::string childInnerSelector = child.value("innerSelector", "");
 
-                            auto childItems = (scope == "document")
-                                ? document->querySelectorAll(childSelector)
-                                : container->querySelectorAll(childSelector);
+                            auto searchRoot = (scope == "document") ? document : container;
+                            auto childItems = queryShadowSelectorAll(searchRoot, childSelector, childIsShadow, childShadowHost, childInnerSelector);
 
                             nlohmann::json childResult = nlohmann::json::object();
                             childResult["name"] = childName;
                             childResult["selector"] = childSelector;
+                            if (childIsShadow) {
+                                childResult["isShadow"] = true;
+                                if (!childShadowHost.empty()) childResult["shadowHost"] = childShadowHost;
+                                if (!childInnerSelector.empty()) childResult["innerSelector"] = childInnerSelector;
+                            }
                             childResult["scope"] = scope;
                             childResult["matched"] = static_cast<int>(childItems.size());
                             childResult["status"] = childItems.empty() ? "FAIL" : "PASS";
@@ -1088,11 +1114,19 @@ public:
             for (const auto& comp : manifest["components"]) {
                 std::string selector = comp.value("selector", "");
                 std::string action = comp.value("action", "replace");
+                bool isShadow = comp.value("isShadow", false);
+                std::string shadowHost = comp.value("shadowHost", "");
+                std::string innerSelector = comp.value("innerSelector", "");
 
-                auto els = document->querySelectorAll(selector);
+                auto els = queryShadowSelectorAll(document, selector, isShadow, shadowHost, innerSelector);
 
                 nlohmann::json compResult = nlohmann::json::object();
                 compResult["selector"] = selector;
+                if (isShadow) {
+                    compResult["isShadow"] = true;
+                    if (!shadowHost.empty()) compResult["shadowHost"] = shadowHost;
+                    if (!innerSelector.empty()) compResult["innerSelector"] = innerSelector;
+                }
                 compResult["action"] = action;
                 compResult["matched"] = static_cast<int>(els.size());
                 compResult["status"] = (action == "hide" || !els.empty()) ? "PASS" : "FAIL";
