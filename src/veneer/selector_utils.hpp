@@ -2,7 +2,7 @@
 #define VENEER_SELECTOR_UTILS_HPP
 
 #include <string>
-#include <cctype>
+#include <string_view>
 
 namespace veneer {
 
@@ -12,37 +12,55 @@ struct ShadowSelectorInfo {
     std::string innerSelector;
 };
 
-inline ShadowSelectorInfo parseShadowSelector(const std::string& rawSel) {
+inline ShadowSelectorInfo parseShadowSelector(std::string_view rawSel) {
     ShadowSelectorInfo info;
-    if (rawSel.find("shadow:") == 0) {
+    if (rawSel.rfind("shadow:", 0) == 0) {
         info.isShadow = true;
-        std::string rest = rawSel.substr(7);
+        std::string_view rest = rawSel.substr(7);
         
         size_t start = rest.find_first_not_of(" \t\n\r");
-        if (start != std::string::npos) rest = rest.substr(start);
-        else rest.clear();
+        if (start != std::string_view::npos) {
+            rest = rest.substr(start);
+        } else {
+            rest = "";
+        }
+
+        std::string_view hostView;
+        std::string_view innerView;
 
         size_t arrowPos = rest.find("->");
-        if (arrowPos != std::string::npos) {
-            info.shadowHost = rest.substr(0, arrowPos);
-            info.innerSelector = rest.substr(arrowPos + 2);
+        if (arrowPos != std::string_view::npos) {
+            hostView = rest.substr(0, arrowPos);
+            innerView = rest.substr(arrowPos + 2);
         } else {
             size_t spacePos = rest.find(' ');
-            if (spacePos != std::string::npos) {
-                info.shadowHost = rest.substr(0, spacePos);
-                info.innerSelector = rest.substr(spacePos + 1);
+            if (spacePos != std::string_view::npos) {
+                hostView = rest.substr(0, spacePos);
+                innerView = rest.substr(spacePos + 1);
             } else {
-                info.shadowHost = rest;
-                info.innerSelector = "";
+                hostView = rest;
+                innerView = "";
             }
         }
-        
-        size_t endHost = info.shadowHost.find_last_not_of(" \t\n\r");
-        if (endHost != std::string::npos) info.shadowHost.erase(endHost + 1);
-        
-        size_t startInner = info.innerSelector.find_first_not_of(" \t\n\r");
-        if (startInner != std::string::npos) info.innerSelector = info.innerSelector.substr(startInner);
-        else info.innerSelector.clear();
+
+        // Trim hostView
+        size_t endHost = hostView.find_last_not_of(" \t\n\r");
+        if (endHost != std::string_view::npos) {
+            hostView = hostView.substr(0, endHost + 1);
+        } else {
+            hostView = "";
+        }
+
+        // Trim innerView
+        size_t startInner = innerView.find_first_not_of(" \t\n\r");
+        if (startInner != std::string_view::npos) {
+            innerView = innerView.substr(startInner);
+        } else {
+            innerView = "";
+        }
+
+        info.shadowHost = std::string(hostView);
+        info.innerSelector = std::string(innerView);
     }
     return info;
 }
