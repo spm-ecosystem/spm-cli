@@ -2,6 +2,7 @@
 #define VENEER_PARSER_HPP
 
 #include "lexer.hpp"
+#include "selector_utils.hpp"
 #include <string>
 #include <vector>
 #include <map>
@@ -77,32 +78,10 @@ public:
     explicit Parser(const std::vector<Token>& tokens) : tokens_(tokens), pos_(0) {}
 
     static void parseShadowSelectorInfo(const std::string& rawSel, bool& outIsShadow, std::string& outHost, std::string& outInner) {
-        outIsShadow = false;
-        outHost.clear();
-        outInner.clear();
-
-        if (rawSel.find("shadow:") == 0 || rawSel.find("shadow: ") == 0) {
-            outIsShadow = true;
-            std::string rest = rawSel.substr(rawSel.find("shadow:") + 7);
-            while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front()))) rest.erase(rest.begin());
-
-            size_t arrowPos = rest.find("->");
-            if (arrowPos != std::string::npos) {
-                outHost = rest.substr(0, arrowPos);
-                outInner = rest.substr(arrowPos + 2);
-            } else {
-                size_t spacePos = rest.find(' ');
-                if (spacePos != std::string::npos) {
-                    outHost = rest.substr(0, spacePos);
-                    outInner = rest.substr(spacePos + 1);
-                } else {
-                    outHost = rest;
-                    outInner = "";
-                }
-            }
-            while (!outHost.empty() && std::isspace(static_cast<unsigned char>(outHost.back()))) outHost.pop_back();
-            while (!outInner.empty() && std::isspace(static_cast<unsigned char>(outInner.front()))) outInner.erase(outInner.begin());
-        }
+        auto info = parseShadowSelector(rawSel);
+        outIsShadow = info.isShadow;
+        outHost = info.shadowHost;
+        outInner = info.innerSelector;
     }
 
     ASTNode parse() {

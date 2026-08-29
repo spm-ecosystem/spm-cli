@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <nlohmann/json.hpp>
+#include "selector_utils.hpp"
 
 namespace veneer {
 
@@ -138,39 +139,6 @@ inline std::optional<std::string> applyPipes(const std::string& initialVal, cons
         }
     }
     return currentVal;
-}
-
-struct ShadowSelectorInfo {
-    bool isShadow = false;
-    std::string shadowHost;
-    std::string innerSelector;
-};
-
-inline ShadowSelectorInfo parseShadowSelector(const std::string& rawSel) {
-    ShadowSelectorInfo info;
-    if (rawSel.find("shadow:") == 0 || rawSel.find("shadow: ") == 0) {
-        info.isShadow = true;
-        std::string rest = rawSel.substr(rawSel.find("shadow:") + 7);
-        while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front()))) rest.erase(rest.begin());
-
-        size_t arrowPos = rest.find("->");
-        if (arrowPos != std::string::npos) {
-            info.shadowHost = rest.substr(0, arrowPos);
-            info.innerSelector = rest.substr(arrowPos + 2);
-        } else {
-            size_t spacePos = rest.find(' ');
-            if (spacePos != std::string::npos) {
-                info.shadowHost = rest.substr(0, spacePos);
-                info.innerSelector = rest.substr(spacePos + 1);
-            } else {
-                info.shadowHost = rest;
-                info.innerSelector = "";
-            }
-        }
-        while (!info.shadowHost.empty() && std::isspace(static_cast<unsigned char>(info.shadowHost.back()))) info.shadowHost.pop_back();
-        while (!info.innerSelector.empty() && std::isspace(static_cast<unsigned char>(info.innerSelector.front()))) info.innerSelector.erase(info.innerSelector.begin());
-    }
-    return info;
 }
 
 template <typename ElementPtr>
