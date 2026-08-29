@@ -56,3 +56,12 @@ target_link_libraries(test_extractor PRIVATE nlohmann_json::nlohmann_json)
 
 add_executable(test_html_validator src/veneer/test_html_validator.cpp)
 target_link_libraries(test_html_validator PRIVATE nlohmann_json::nlohmann_json)
+
+enable_testing()
+add_test(NAME test_emitter COMMAND test_emitter)
+add_test(NAME test_lexer COMMAND test_lexer)
+add_test(NAME test_parser COMMAND test_parser)
+add_test(NAME test_resolver COMMAND test_resolver)
+add_test(NAME test_registry COMMAND test_registry)
+add_test(NAME test_extractor COMMAND test_extractor)
+add_test(NAME test_html_validator COMMAND test_html_validator)
