@@ -18,6 +18,7 @@ public:
             {"UiDashboardPage", {"cards", "children", "className", "height", "id", "key", "pageTitle", "style", "subTitle"}},
             {"UiFlexColumn", {"children", "className", "id", "key", "style"}},
             {"UiFlexRow", {"children", "className", "id", "key", "style"}},
+            {"UiFormContainer", {"actionUrl", "children", "className", "fields", "hiddenInputs", "id", "key", "method", "style", "subTitle", "submitLabel", "title"}},
             {"UiGrid", {"children", "className", "id", "key", "style"}},
             {"UiHeroLanding", {"children", "className", "ctaLabel", "ctaUrl", "id", "key", "logoHref", "logoUrl", "primaryLinks", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "siteName", "style", "subtext", "tagline"}},
             {"UiImage", {"alt", "children", "className", "id", "key", "src", "style"}},
@@ -26,8 +27,9 @@ public:
             {"UiLink", {"children", "className", "href", "id", "key", "style"}},
             {"UiModernGridPage", {"children", "className", "height", "hideSidebarOnMobile", "id", "items", "key", "mobileBreakpoint", "mobileCardAspectRatio", "mobileColumns", "mobileGap", "mobileHeaderSticky", "mobilePadding", "mobileShowHeader", "mobileShowPagination", "onLoadMore", "pageLinks", "pageTitle", "searchDefaultValue", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "sidebarHtml", "sidebarWidth", "style", "tagGroups", "tags"}},
             {"UiNavHeader", {"children", "className", "hideOnMobile", "id", "items", "key", "layout", "logoHref", "logoUrl", "mobileBreakpoint", "primaryLinks", "secondaryLinks", "siteName", "sticky", "style"}},
+            {"UiNestedTreeTable", {"children", "className", "columns", "data", "expandedDepth", "id", "key", "style", "title"}},
             {"UiPaginationBar", {"children", "className", "id", "key", "pageLinks", "paramName", "style"}},
-            {"UiPostDetails", {"buttons", "children", "className", "id", "imageUrl", "key", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "statisticsHtml", "style", "tagGroups", "tags"}},
+            {"UiPostDetails", {"buttons", "children", "className", "id", "imageAlt", "imageUrl", "key", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "statisticsHtml", "style", "tagGroups", "tags"}},
             {"UiScrollBox", {"children", "className", "height", "id", "key", "maxHeight", "overflow", "overflowX", "overflowY", "style"}},
             {"UiScrollPanel", {"buttons", "children", "className", "id", "key", "onClose", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "statisticsHtml", "style", "tags", "width"}},
             {"UiSearchBar", {"children", "className", "defaultValue", "hiddenFields", "id", "key", "method", "placeholder", "queryParamName", "style", "submitUrl"}},
@@ -36,6 +38,7 @@ public:
             {"UiTable", {"children", "className", "columns", "data", "id", "key", "onRowClick", "onSort", "sortDirection", "sortKey", "style"}},
             {"UiTableListPage", {"children", "className", "columns", "height", "id", "key", "onLoadMore", "pageLinks", "pageTitle", "style", "tableRows"}},
             {"UiTagBadge", {"addUrl", "children", "className", "count", "href", "id", "key", "label", "removeUrl", "style", "variant"}},
+            {"UiTerminalConsole", {"autoScroll", "children", "className", "filterLevel", "id", "key", "logs", "maxLines", "style", "title"}},
             {"UiText", {"children", "className", "content", "id", "key", "style"}},
             {"UiToast", {"children", "className", "id", "key", "message", "onClose", "style", "type"}}
         };
