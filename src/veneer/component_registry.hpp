@@ -37,6 +37,7 @@ public:
             {"UiStatsDashboard", {"children", "className", "dateRangeText", "height", "id", "key", "navLinks", "pageTitle", "sections", "style"}},
             {"UiTable", {"children", "className", "columns", "data", "id", "key", "onRowClick", "onSort", "sortDirection", "sortKey", "style"}},
             {"UiTableListPage", {"children", "className", "columns", "height", "id", "key", "onLoadMore", "pageLinks", "pageTitle", "style", "tableRows"}},
+            {"UiTabs", {"activeParamName", "children", "className", "id", "key", "orientation", "style", "tabs", "variant"}},
             {"UiTagBadge", {"addUrl", "children", "className", "count", "href", "id", "key", "label", "removeUrl", "style", "variant"}},
             {"UiTerminalConsole", {"autoScroll", "children", "className", "filterLevel", "id", "key", "logs", "maxLines", "style", "title"}},
             {"UiText", {"children", "className", "content", "id", "key", "style"}},

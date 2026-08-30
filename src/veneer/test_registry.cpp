@@ -26,6 +26,7 @@ void test_component_registry() {
     assert(ComponentSchemaRegistry::isKnownComponent("UiFormContainer") == true);
     assert(ComponentSchemaRegistry::isKnownComponent("UiNestedTreeTable") == true);
     assert(ComponentSchemaRegistry::isKnownComponent("UiTerminalConsole") == true);
+    assert(ComponentSchemaRegistry::isKnownComponent("UiTabs") == true);
     // Primitives
     assert(ComponentSchemaRegistry::isKnownComponent("UiBox") == true);
     assert(ComponentSchemaRegistry::isKnownComponent("UiFlexRow") == true);
@@ -58,6 +59,8 @@ void test_component_registry() {
     assert(ComponentSchemaRegistry::isValidProp("UiFormContainer", "fields") == true);
     assert(ComponentSchemaRegistry::isValidProp("UiNestedTreeTable", "expandedDepth") == true);
     assert(ComponentSchemaRegistry::isValidProp("UiTerminalConsole", "autoScroll") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiTabs", "tabs") == true);
+    assert(ComponentSchemaRegistry::isValidProp("UiTabs", "variant") == true);
 
     // Invalid / deprecated / non-existent props
     assert(ComponentSchemaRegistry::isValidProp("UiImageCard", "url") == false);
@@ -107,9 +110,10 @@ void test_component_registry() {
 
     // 5. Schema map integrity
     const auto& schemas = ComponentSchemaRegistry::getSchemaMap();
-    assert(schemas.size() == 28);
+    assert(schemas.size() == 29);
     assert(schemas.find("UiNavHeader") != schemas.end());
     assert(schemas.find("UiToast") != schemas.end());
+    assert(schemas.find("UiTabs") != schemas.end());
     assert(schemas.find("UiBox") != schemas.end());
     assert(schemas.find("UiScrollBox") != schemas.end());
 
