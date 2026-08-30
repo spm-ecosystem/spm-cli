@@ -48,7 +48,7 @@ Defines styling variables (custom property mappings) and custom CSS rules inject
 *   `author` (string): Developer signature.
 *   `description` (string): Short explanation of theme styling goals.
 *   `cssVariables` (object): Map of custom CSS property names to valid CSS color, spacing, or sizing values. Components should exclusively rely on these variables.
-*   `customStyles` (string): Raw CSS stylesheet injected globally into the main document to hide ads, banners, or apply global page layout overrides.
+*   `customStyles` (string): Raw CSS stylesheet injected globally into the main document and Shadow DOM roots to hide ads, banners, or apply global page layout overrides. Automatically bundled from any `.css` files (e.g. `content.css`) in the theme project directory during compilation (`spm compile`) or dev server watching (`spm dev`).
 *   `noticeSelector` (string): Optional selector targeting notices that should trigger extension banner overlays.
 
 ---
