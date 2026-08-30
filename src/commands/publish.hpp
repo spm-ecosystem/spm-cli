@@ -58,11 +58,15 @@ inline int runPublish(const std::string& manifestPath = "manifest.json") {
         fs::create_directories(targetFolder);
 
         std::cout << "[Publish] Packaging theme files...\n";
-        for (const auto& entry : fs::directory_iterator(currentDir)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".json") {
-                fs::copy(entry.path(), targetFolder / entry.path().filename(), fs::copy_options::overwrite_existing);
+        try {
+            for (const auto& entry : fs::directory_iterator(currentDir, fs::directory_options::skip_permission_denied)) {
+                try {
+                    if (entry.is_regular_file() && entry.path().extension() == ".json") {
+                        fs::copy(entry.path(), targetFolder / entry.path().filename(), fs::copy_options::overwrite_existing);
+                    }
+                } catch (...) {}
             }
-        }
+        } catch (...) {}
 
         std::string bundledCss = veneer::bundleCssFiles(currentDir);
         if (!bundledCss.empty()) {
@@ -75,17 +79,21 @@ inline int runPublish(const std::string& manifestPath = "manifest.json") {
             }
         }
 
-        for (const auto& entry : fs::recursive_directory_iterator(currentDir)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
-                if (entry.path().string().find(tempWorkspace.string()) != std::string::npos) {
-                    continue;
-                }
-                fs::path relPath = fs::relative(entry.path(), currentDir);
-                fs::path destFile = targetFolder / relPath;
-                fs::create_directories(destFile.parent_path());
-                fs::copy(entry.path(), destFile, fs::copy_options::overwrite_existing);
+        try {
+            for (const auto& entry : fs::recursive_directory_iterator(currentDir, fs::directory_options::skip_permission_denied)) {
+                try {
+                    if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
+                        if (entry.path().string().find(tempWorkspace.string()) != std::string::npos) {
+                            continue;
+                        }
+                        fs::path relPath = fs::relative(entry.path(), currentDir);
+                        fs::path destFile = targetFolder / relPath;
+                        fs::create_directories(destFile.parent_path());
+                        fs::copy(entry.path(), destFile, fs::copy_options::overwrite_existing);
+                    }
+                } catch (...) {}
             }
-        }
+        } catch (...) {}
 
         std::cout << "[Publish] Pushing to remote registry...\n";
         safeExecute("git", {"-C", tempWorkspace.string(), "add", "--sparse", "."});

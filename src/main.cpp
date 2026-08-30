@@ -39,9 +39,12 @@ int main(int argc, char** argv) {
     else if (command == "dev") {
         std::string manifestPath = "";
         for (int i = 2; i < argc; i++) {
-            if (std::string(argv[i]) == "-d" && i + 1 < argc) {
+            std::string arg = argv[i];
+            if ((arg == "-d" || arg == "--dir") && i + 1 < argc) {
                 manifestPath = argv[i + 1];
                 break;
+            } else if (!arg.empty() && arg[0] != '-' && manifestPath.empty()) {
+                manifestPath = arg;
             }
         }
         if (manifestPath.empty()) {

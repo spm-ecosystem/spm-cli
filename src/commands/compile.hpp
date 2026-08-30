@@ -37,10 +37,16 @@ inline int runCompile(int argc, char** argv) {
 
     std::string combinedVnr = "";
     if (fs::is_directory(sourcePath)) {
-        for (const auto& entry : fs::recursive_directory_iterator(sourcePath)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
-                combinedVnr += readTextFile(entry.path().string()) + "\n\n";
+        try {
+            for (const auto& entry : fs::recursive_directory_iterator(sourcePath, fs::directory_options::skip_permission_denied)) {
+                try {
+                    if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
+                        combinedVnr += readTextFile(entry.path().string()) + "\n\n";
+                    }
+                } catch (...) {}
             }
+        } catch (const std::exception& e) {
+            std::cerr << "[Warning] Directory iteration error: " << e.what() << "\n";
         }
         if (combinedVnr.empty()) {
             std::cerr << "[Error] No .vnr files found in directory: " << sourcePath << "\n";
@@ -62,28 +68,32 @@ inline int runCompile(int argc, char** argv) {
         if (!fs::is_directory(sourcePath)) {
             fs::path parentDir = fs::path(sourcePath).parent_path();
             if (parentDir.empty()) parentDir = ".";
-            for (const auto& entry : fs::directory_iterator(parentDir)) {
-                if (entry.is_regular_file() && entry.path().extension() == ".vnr" && entry.path() != fs::path(sourcePath)) {
+            try {
+                for (const auto& entry : fs::directory_iterator(parentDir, fs::directory_options::skip_permission_denied)) {
                     try {
-                        std::string siblingContent = readTextFile(entry.path().string());
-                        veneer::Lexer siblingLexer(siblingContent);
-                        veneer::Parser siblingParser(siblingLexer.tokenize());
-                        veneer::ASTNode siblingAst = siblingParser.parse();
-                        for (const auto& cls : siblingAst.classes) {
-                            bool exists = false;
-                            for (const auto& c : ast.classes) {
-                                if (c.name == cls.name) {
-                                    exists = true;
-                                    break;
+                        if (entry.is_regular_file() && entry.path().extension() == ".vnr" && entry.path() != fs::path(sourcePath)) {
+                            try {
+                                std::string siblingContent = readTextFile(entry.path().string());
+                                veneer::Lexer siblingLexer(siblingContent);
+                                veneer::Parser siblingParser(siblingLexer.tokenize());
+                                veneer::ASTNode siblingAst = siblingParser.parse();
+                                for (const auto& cls : siblingAst.classes) {
+                                    bool exists = false;
+                                    for (const auto& c : ast.classes) {
+                                        if (c.name == cls.name) {
+                                            exists = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!exists) {
+                                        ast.classes.push_back(cls);
+                                    }
                                 }
-                            }
-                            if (!exists) {
-                                ast.classes.push_back(cls);
-                            }
+                            } catch (...) {}
                         }
                     } catch (...) {}
                 }
-            }
+            } catch (...) {}
         }
 
         veneer::Resolver resolver(ast);

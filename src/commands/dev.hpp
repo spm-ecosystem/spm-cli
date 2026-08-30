@@ -32,10 +32,16 @@ inline std::string buildDevPayload(const std::string& manifestPath) {
 
     if (fs::is_directory(p)) {
         std::string combinedVnr = "";
-        for (const auto& entry : fs::recursive_directory_iterator(p)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
-                combinedVnr += readTextFile(entry.path().string()) + "\n\n";
+        try {
+            for (const auto& entry : fs::recursive_directory_iterator(p, fs::directory_options::skip_permission_denied)) {
+                try {
+                    if (entry.is_regular_file() && entry.path().extension() == ".vnr") {
+                        combinedVnr += readTextFile(entry.path().string()) + "\n\n";
+                    }
+                } catch (...) {}
             }
+        } catch (const std::exception& e) {
+            std::cerr << "[Watcher] Directory scan warning: " << e.what() << "\n";
         }
         if (combinedVnr.empty()) {
             std::cerr << "[Watcher] No .vnr files found in directory: " << manifestPath << "\n";

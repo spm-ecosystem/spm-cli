@@ -21,19 +21,21 @@ inline std::string bundleCssFiles(const fs::path& directory) {
     std::vector<fs::path> cssFiles;
     try {
         if (fs::exists(directory) && fs::is_directory(directory)) {
-            for (const auto& entry : fs::recursive_directory_iterator(directory)) {
-                if (entry.is_regular_file() && entry.path().extension() == ".css") {
-                    std::string pathStr = entry.path().string();
-                    // Exclude common build/temp/system folders
-                    if (pathStr.find("/.git/") != std::string::npos ||
-                        pathStr.find("/.vscode/") != std::string::npos ||
-                        pathStr.find("/node_modules/") != std::string::npos ||
-                        pathStr.find("/tmp/") != std::string::npos ||
-                        pathStr.find("spm_publish_") != std::string::npos) {
-                        continue;
+            for (const auto& entry : fs::recursive_directory_iterator(directory, fs::directory_options::skip_permission_denied)) {
+                try {
+                    if (entry.is_regular_file() && entry.path().extension() == ".css") {
+                        std::string pathStr = entry.path().string();
+                        // Exclude common build/temp/system folders
+                        if (pathStr.find("/.git/") != std::string::npos ||
+                            pathStr.find("/.vscode/") != std::string::npos ||
+                            pathStr.find("/node_modules/") != std::string::npos ||
+                            pathStr.find("/tmp/") != std::string::npos ||
+                            pathStr.find("spm_publish_") != std::string::npos) {
+                            continue;
+                        }
+                        cssFiles.push_back(entry.path());
                     }
-                    cssFiles.push_back(entry.path());
-                }
+                } catch (...) {}
             }
         }
     } catch (...) {}
