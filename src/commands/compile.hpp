@@ -4,6 +4,7 @@
 #include <fstream>
 #include <filesystem>
 #include "../utils/fs_utils.hpp"
+#include "../utils/css_bundler.hpp"
 #include "../veneer/lexer.hpp"
 #include "../veneer/parser.hpp"
 #include "../veneer/resolver.hpp"
@@ -106,6 +107,12 @@ inline int runCompile(int argc, char** argv) {
         std::string existingJson = "";
         if (fs::exists(outputPath)) {
             existingJson = readTextFile(outputPath);
+        }
+
+        fs::path themeDir = fs::is_directory(sourcePath) ? fs::path(sourcePath) : fs::path(sourcePath).parent_path();
+        std::string bundledCss = veneer::bundleCssFiles(themeDir);
+        if (!bundledCss.empty() && !ast.themes.empty()) {
+            ast.themes[0].customStyles.push_back(bundledCss);
         }
 
         std::string compiledJson = veneer::Emitter::emit(ast, existingJson);
