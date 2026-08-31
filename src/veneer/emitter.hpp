@@ -67,6 +67,11 @@ public:
             }
         };
 
+        // 0. targetUrl
+        if (!ast.targetUrl.empty()) {
+            root["targetUrl"] = ast.targetUrl;
+        }
+
         // 1. Theme
         if (!ast.themes.empty()) {
             const auto& themeNode = ast.themes[0];

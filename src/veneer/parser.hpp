@@ -33,6 +33,7 @@ struct ASTChild {
 
 struct ThemeNode {
     std::string label;
+    std::string targetUrl;
     std::map<std::string, std::string> variables;
     std::vector<std::string> customStyles;
 };
@@ -67,6 +68,7 @@ struct ReconstructNode {
 };
 
 struct ASTNode {
+    std::string targetUrl;
     std::vector<ThemeNode> themes;
     std::vector<ClassNode> classes;
     std::vector<SelectorNode> selectors;
@@ -95,8 +97,20 @@ public:
                 root.selectors.push_back(parseSelector());
             } else if (match(TokenType::KeywordReconstruct)) {
                 root.reconstructs.push_back(parseReconstruct());
+            } else if (matchKeywordOrIdentifier(TokenType::KeywordTargetUrl, "targetUrl")) {
+                match(TokenType::Colon);
+                root.targetUrl = parseStringOrIdentifier();
+                match(TokenType::Semicolon);
             } else {
                 throw error(peek(), "Unexpected token in global scope");
+            }
+        }
+        if (root.targetUrl.empty()) {
+            for (const auto& theme : root.themes) {
+                if (!theme.targetUrl.empty()) {
+                    root.targetUrl = theme.targetUrl;
+                    break;
+                }
             }
         }
         return root;
@@ -163,7 +177,8 @@ private:
             match(TokenType::KeywordExtends) || match(TokenType::KeywordBind) ||
             match(TokenType::KeywordPreserve) || match(TokenType::KeywordChild) ||
             match(TokenType::KeywordVariables) || match(TokenType::KeywordStyles) ||
-            match(TokenType::KeywordScope) || match(TokenType::KeywordShadow)) {
+            match(TokenType::KeywordScope) || match(TokenType::KeywordShadow) ||
+            match(TokenType::KeywordTargetUrl)) {
             std::string val(previous().value);
             if (previous().type == TokenType::StringLiteral) {
                 if ((val.rfind("R\"", 0) == 0 || val.rfind("r\"", 0) == 0) && val.back() == '"') {
@@ -208,6 +223,9 @@ private:
                 consume(TokenType::Colon, "Expected ':' after variable name");
                 std::string val = parseStringOrIdentifier();
                 consume(TokenType::Semicolon, "Expected ';' after variable value");
+                if (key == "targetUrl") {
+                    theme.targetUrl = val;
+                }
                 theme.variables[key] = val;
             }
         }

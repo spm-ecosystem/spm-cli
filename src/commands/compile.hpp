@@ -17,17 +17,20 @@ namespace veneer {
 inline int runCompile(int argc, char** argv) {
     std::string sourcePath = "";
     std::string outputPath = "";
+    bool strict = false;
     for (int i = 2; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "-o" && i + 1 < argc) {
             outputPath = argv[++i];
+        } else if (arg == "--strict") {
+            strict = true;
         } else if (arg[0] != '-') {
             sourcePath = arg;
         }
     }
 
     if (sourcePath.empty() || outputPath.empty()) {
-        std::cerr << "[Error] Usage: spm compile <source.vnr|directory> -o <output.json>\n";
+        std::cerr << "[Error] Usage: spm compile <source.vnr|directory> -o <output.json> [--strict]\n";
         return 1;
     }
 
@@ -78,6 +81,9 @@ inline int runCompile(int argc, char** argv) {
                                 veneer::Lexer siblingLexer(siblingContent);
                                 veneer::Parser siblingParser(siblingLexer.tokenize());
                                 veneer::ASTNode siblingAst = siblingParser.parse();
+                                if (ast.targetUrl.empty() && !siblingAst.targetUrl.empty()) {
+                                    ast.targetUrl = siblingAst.targetUrl;
+                                }
                                 for (const auto& cls : siblingAst.classes) {
                                     bool exists = false;
                                     for (const auto& c : ast.classes) {
@@ -97,6 +103,20 @@ inline int runCompile(int argc, char** argv) {
             } catch (...) {}
         }
 
+        std::string existingJson = "";
+        if (fs::exists(outputPath)) {
+            existingJson = readTextFile(outputPath);
+            try {
+                nlohmann::json existingObj = nlohmann::json::parse(existingJson);
+                if (ast.targetUrl.empty() && existingObj.contains("targetUrl") && existingObj["targetUrl"].is_string()) {
+                    std::string tUrl = existingObj["targetUrl"].get<std::string>();
+                    if (!tUrl.empty()) {
+                        ast.targetUrl = tUrl;
+                    }
+                }
+            } catch (...) {}
+        }
+
         veneer::Resolver resolver(ast);
         resolver.resolve();
 
@@ -104,9 +124,9 @@ inline int runCompile(int argc, char** argv) {
             std::cerr << warn << "\n";
         }
 
-        std::string existingJson = "";
-        if (fs::exists(outputPath)) {
-            existingJson = readTextFile(outputPath);
+        if (strict && ast.targetUrl.empty()) {
+            std::cerr << "[Error] Veneer compilation failed in strict mode: Manifest lacks required root 'targetUrl' property.\n";
+            return 1;
         }
 
         fs::path themeDir = fs::is_directory(sourcePath) ? fs::path(sourcePath) : fs::path(sourcePath).parent_path();

@@ -21,6 +21,9 @@ public:
     }
 
     void resolve() {
+        if (ast_.targetUrl.empty()) {
+            warnings_.push_back("[Compiler Warning] Manifest lacks required root 'targetUrl' property. Extension theme matching may fail at runtime.");
+        }
         for (auto& cls : ast_.classes) {
             resolveClass(cls);
         }

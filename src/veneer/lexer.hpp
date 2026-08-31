@@ -22,6 +22,7 @@ enum class TokenType {
     KeywordStyles,
     KeywordScope,
     KeywordShadow,
+    KeywordTargetUrl,
     Arrow,
     Identifier,
     StringLiteral,
@@ -48,6 +49,7 @@ inline const char* tokenTypeToString(TokenType type) {
         case TokenType::KeywordStyles:      return "KeywordStyles";
         case TokenType::KeywordScope:       return "KeywordScope";
         case TokenType::KeywordShadow:      return "KeywordShadow";
+        case TokenType::KeywordTargetUrl:   return "KeywordTargetUrl";
         case TokenType::Arrow:              return "Arrow";
         case TokenType::Identifier:         return "Identifier";
         case TokenType::StringLiteral:      return "StringLiteral";
@@ -256,6 +258,7 @@ private:
         if (text == "styles")      return TokenType::KeywordStyles;
         if (text == "scope")       return TokenType::KeywordScope;
         if (text == "shadow")      return TokenType::KeywordShadow;
+        if (text == "targetUrl")   return TokenType::KeywordTargetUrl;
         return std::nullopt;
     }
 };

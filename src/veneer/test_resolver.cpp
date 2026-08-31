@@ -144,6 +144,7 @@ void testCircularDependency() {
 
 void testUnknownPropWarning() {
     std::string code = R"(
+        targetUrl: "https://example.com";
         reconstruct "#header" -> UiNavHeader {
             siteNam: "My Brand";
             sticky: "true";
@@ -177,12 +178,54 @@ void testUnknownPropWarning() {
     std::cout << "testUnknownPropWarning passed." << std::endl;
 }
 
+void testMissingTargetUrlWarning() {
+    std::string code = R"(
+        reconstruct "#main" -> UiTableListPage {}
+    )";
+    Lexer lexer(code);
+    Parser parser(lexer.tokenize());
+    ASTNode ast = parser.parse();
+    Resolver resolver(ast);
+    resolver.resolve();
+
+    const auto& warnings = resolver.getWarnings();
+    bool hasTargetUrlWarning = false;
+    for (const auto& w : warnings) {
+        if (w == "[Compiler Warning] Manifest lacks required root 'targetUrl' property. Extension theme matching may fail at runtime.") {
+            hasTargetUrlWarning = true;
+            break;
+        }
+    }
+    assert(hasTargetUrlWarning);
+    std::cout << "testMissingTargetUrlWarning passed." << std::endl;
+}
+
+void testTargetUrlPresentNoWarning() {
+    std::string code = R"(
+        targetUrl: "*://example.com/*";
+        reconstruct "#main" -> UiTableListPage {}
+    )";
+    Lexer lexer(code);
+    Parser parser(lexer.tokenize());
+    ASTNode ast = parser.parse();
+    assert(ast.targetUrl == "*://example.com/*");
+    Resolver resolver(ast);
+    resolver.resolve();
+
+    for (const auto& w : resolver.getWarnings()) {
+        assert(w != "[Compiler Warning] Manifest lacks required root 'targetUrl' property. Extension theme matching may fail at runtime.");
+    }
+    std::cout << "testTargetUrlPresentNoWarning passed." << std::endl;
+}
+
 int main() {
     testSingleInheritance();
     testMultiLevelInheritance();
     testChildBlockInheritance();
     testCircularDependency();
     testUnknownPropWarning();
+    testMissingTargetUrlWarning();
+    testTargetUrlPresentNoWarning();
     std::cout << "All resolver tests passed." << std::endl;
     return 0;
 }
