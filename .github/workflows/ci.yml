@@ -14,7 +14,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install dependencies
+    - name: Install C++ dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y libssl-dev cmake build-essential
@@ -22,10 +22,10 @@ jobs:
     - name: Configure CMake
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-    - name: Build project
+    - name: Build C++ Binary
       run: cmake --build build --config Release
 
-    - name: Run Tests
+    - name: Run Test Suite
       run: |
         ./build/test_lexer
         ./build/test_parser
