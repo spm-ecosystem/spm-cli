@@ -26,7 +26,7 @@ public:
             {"UiImageViewer", {"alt", "background", "children", "className", "fit", "id", "key", "src", "style"}},
             {"UiLink", {"children", "className", "href", "id", "key", "style"}},
             {"UiModernGridPage", {"children", "className", "height", "hideSidebarOnMobile", "id", "items", "key", "mobileBreakpoint", "mobileCardAspectRatio", "mobileColumns", "mobileGap", "mobileHeaderSticky", "mobilePadding", "mobileShowHeader", "mobileShowPagination", "onLoadMore", "pageLinks", "pageTitle", "searchDefaultValue", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "sidebarHtml", "sidebarWidth", "style", "tagGroups", "tags"}},
-            {"UiNavHeader", {"children", "className", "hideOnMobile", "id", "items", "key", "layout", "logoHref", "logoUrl", "mobileBreakpoint", "primaryLinks", "secondaryLinks", "siteName", "sticky", "style"}},
+            {"UiNavHeader", {"children", "className", "extraHtml", "hideOnMobile", "id", "items", "key", "layout", "logoHref", "logoUrl", "mobileBreakpoint", "primaryLinks", "secondaryLinks", "siteName", "sticky", "style"}},
             {"UiNestedTreeTable", {"children", "className", "columns", "data", "expandedDepth", "id", "key", "style", "title"}},
             {"UiPaginationBar", {"children", "className", "id", "key", "pageLinks", "paramName", "style"}},
             {"UiPostDetails", {"buttons", "children", "className", "id", "imageAlt", "imageUrl", "key", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "showSearch", "statisticsHtml", "style", "tagGroups", "tags"}},
