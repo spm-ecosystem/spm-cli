@@ -98,8 +98,8 @@ The compiled binary will be generated as `spm` in the root of the workspace.
 ## Documentation
 
 - [🌐 Interactive Documentation Portal](https://spm-ecosystem.github.io/spm-portal/)
-- [Veneer Spec Syntax Guide](docs/veneer_spec.md)
-- [Theme Manifest Schema Reference](docs/manifest_schema.md)
+- [Veneer Spec Syntax Guide](https://github.com/spm-ecosystem/spm-components/blob/main/docs/veneer-reference.md)
+- [Theme Manifest Schema Reference](https://github.com/spm-ecosystem/spm-components/blob/main/docs/manifest-schema.md)
 
 ---
 
