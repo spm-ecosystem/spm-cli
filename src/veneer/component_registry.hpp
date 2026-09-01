@@ -18,7 +18,7 @@ public:
             {"UiDashboardPage", {"cards", "children", "className", "height", "id", "key", "pageTitle", "style", "subTitle"}},
             {"UiFlexColumn", {"children", "className", "id", "key", "style"}},
             {"UiFlexRow", {"children", "className", "id", "key", "style"}},
-            {"UiFormContainer", {"actionUrl", "activeTabId", "children", "className", "fields", "hiddenInputs", "id", "key", "method", "style", "subTitle", "submitLabel", "tabs", "title"}},
+            {"UiFormContainer", {"actionUrl", "activeTabId", "children", "className", "fields", "forgotPasswordUrl", "hiddenInputs", "id", "key", "method", "secondaryLink", "style", "subTitle", "submitLabel", "tabs", "title"}},
             {"UiGrid", {"children", "className", "id", "key", "style"}},
             {"UiHeroLanding", {"children", "className", "ctaLabel", "ctaUrl", "id", "key", "logoHref", "logoUrl", "primaryLinks", "searchParamName", "searchPlaceholder", "searchSubmitUrl", "siteName", "style", "subtext", "tagline"}},
             {"UiImage", {"alt", "children", "className", "id", "key", "src", "style"}},
