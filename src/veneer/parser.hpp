@@ -213,6 +213,7 @@ private:
                 }
                 consume(TokenType::BraceClose, "Expected '}' after variables block");
             } else if (matchKeywordOrIdentifier(TokenType::KeywordStyles, "customStyles")) {
+                std::cerr << "::warning:: customStyles{} is deprecated and has no effect at runtime — move custom styles to content.css" << std::endl;
                 consume(TokenType::BraceOpen, "Expected '{' after customStyles");
                 while (!check(TokenType::BraceClose) && !isAtEnd()) {
                     theme.customStyles.push_back(parseStringOrIdentifier());
