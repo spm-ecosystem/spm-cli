@@ -458,7 +458,7 @@ winning on conflicts (same override rule as class-to-class inheritance).
 ### 5.7 Circular dependency (compile error — shown for reference)
 
 ```vnr
-// ❌ This will fail to compile: "circular inheritance detected: A -> B -> A"
+// [ERROR] This will fail to compile: "circular inheritance detected: A -> B -> A"
 class A extends B {
     bind x: "self | text";
 }
@@ -471,7 +471,7 @@ class B extends A {
 ### 5.8 Referencing an undeclared class in the same file (compile error)
 
 ```vnr
-// ❌ Fails unless `MissingBase` is declared somewhere in this file or a sibling .vnr
+// [ERROR] Fails unless `MissingBase` is declared somewhere in this file or a sibling .vnr
 // file in the same directory (see Sibling Class Autoloading, §15.3)
 class Derived extends MissingBase {
     bind z: "self | text";
@@ -1263,10 +1263,10 @@ bind subscribed: "input[name='newsletter'] | attr:checked";
 ### 14.3 Arrays and objects only coerce from **raw strings**, not from unescaped quoted strings
 
 ```vnr
-// ❌ Will NOT parse as JSON — the escaped quotes make this a plain string containing braces
+// [ERROR] Will NOT parse as JSON — the escaped quotes make this a plain string containing braces
 badExample: "{\"a\": 1}";
 
-// ✅ Correct approach — use a raw string so the JSON body is unescaped
+// [OK] Correct approach — use a raw string so the JSON body is unescaped
 goodExample: R"({"a": 1})";
 ```
 
@@ -1708,7 +1708,7 @@ reconstruct "#property-detail" -> UiItemDetailsPage {
 ### 17.1 Missing semicolon
 
 ```vnr
-// ❌ compile error: expected ';' after property value
+// [ERROR] compile error: expected ';' after property value
 selector "#nav" -> UiNavHeader {
     action: replace
     logoHref: "https://example.com/";
@@ -1716,7 +1716,7 @@ selector "#nav" -> UiNavHeader {
 ```
 
 ```vnr
-// ✅
+// [OK]
 selector "#nav" -> UiNavHeader {
     action: replace;
     logoHref: "https://example.com/";
@@ -1729,32 +1729,32 @@ selector "#nav" -> UiNavHeader {
 // file: a.vnr
 theme "First" { variables {} }
 
-// file: b.vnr — ❌ compile error: duplicate theme declaration
+// file: b.vnr — [ERROR] compile error: duplicate theme declaration
 theme "Second" { variables {} }
 ```
 
 ### 17.3 Unescaped backslashes in a plain (non-raw) string regex
 
 ```vnr
-// ❌ almost certainly not what was intended — "\d" is not a valid escape
+// [ERROR] almost certainly not what was intended — "\d" is not a valid escape
 // sequence in a plain string literal and will likely be mis-parsed or rejected
 urlPattern: "\d+";
 
-// ✅ use a raw string for anything regex-flavored
+// [OK] use a raw string for anything regex-flavored
 urlPattern: R"(\d+)";
 ```
 
 ### 17.4 Forgetting `action` on a `selector` block
 
 ```vnr
-// ❌ compile error: selector block missing required "action" key
+// [ERROR] compile error: selector block missing required "action" key
 selector "#promo" -> UiPromoBanner {
     headline: "Sale!";
 }
 ```
 
 ```vnr
-// ✅
+// [OK]
 selector "#promo" -> UiPromoBanner {
     action: replace;
     headline: "Sale!";
@@ -1786,7 +1786,7 @@ compiler's sibling autoloader can't find (e.g. it's in a different top-level dir
 ### 17.6 Using `child` outside of a `selector`/`reconstruct` block
 
 ```vnr
-// ❌ compile error: "child" is only valid nested inside a selector or reconstruct block
+// [ERROR] compile error: "child" is only valid nested inside a selector or reconstruct block
 child orphanList {
     selector: ".x";
 }
@@ -1795,14 +1795,14 @@ child orphanList {
 ### 17.7 Typo'd base extractor name
 
 ```vnr
-// ❌ compile error: unknown base extractor "txt" (did you mean "text"?)
+// [ERROR] compile error: unknown base extractor "txt" (did you mean "text"?)
 bind title: "h2 | txt";
 ```
 
 ### 17.8 Reusing a `child` name twice at the same nesting level
 
 ```vnr
-// ❌ likely a compile-time or resolver-level conflict: duplicate child name "items"
+// [ERROR] likely a compile-time or resolver-level conflict: duplicate child name "items"
 // within the same parent block
 reconstruct "#page" -> UiGridPage {
     child items {
@@ -1815,7 +1815,7 @@ reconstruct "#page" -> UiGridPage {
 ```
 
 ```vnr
-// ✅ give each list a distinct prop name
+// [OK] give each list a distinct prop name
 reconstruct "#page" -> UiGridPage {
     child primaryItems {
         selector: ".a";
@@ -1829,13 +1829,13 @@ reconstruct "#page" -> UiGridPage {
 ### 17.9 Raw string delimiter collision
 
 ```vnr
-// ❌ the default raw-string terminator `)"` appears inside the content itself,
+// [ERROR] the default raw-string terminator `)"` appears inside the content itself,
 // closing the literal prematurely and leaving trailing garbage that fails to parse
 badRegex: R"(\)")"; 
 ```
 
 ```vnr
-// ✅ use a custom delimiter so the closing sequence becomes unambiguous
+// [OK] use a custom delimiter so the closing sequence becomes unambiguous
 badRegex: R"tag(\)")tag";
 ```
 
